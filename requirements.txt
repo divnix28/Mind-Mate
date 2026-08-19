@@ -4,3 +4,6 @@ transformers
 torch
 scikit-learn
 pandas
+presidio-analyzer
+presidio-anonymizer
+spacy
