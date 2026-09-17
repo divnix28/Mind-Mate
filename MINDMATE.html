@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MindMate 2.0 | Early-Warning Mental Health Triage</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons for smooth aesthetic UI icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Connect to external CSS -->
+    <link rel="stylesheet" href="/static/MINDMATE.css" />
+    <style>
+        /* Calming Breathing Animation */
+        @keyframes breatheAnimation {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 0.6;
+            }
+
+            50% {
+                transform: scale(1.6);
+                opacity: 0.95;
+            }
+        }
+
+        .animate-breathe {
+            animation: breatheAnimation 8s ease-in-out infinite;
+        }
+    </style>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                extend: {
+                    animation: {
+                        'gradient': 'gradient 15s ease infinite',
+                        'glass-pulse': 'glassPulse 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        gradient: {
+                            '0%, 100%': { 'background-position': '0% 50%' },
+                            '50%': { 'background-position': '100% 50%' },
+                        },
+                        glassPulse: {
+                            '0%, 100%': { 'box-shadow': '0 0 15px rgba(59, 130, 246, 0.1)', 'border-color': 'rgba(59, 130, 246, 0.2)' },
+                            '50%': { 'box-shadow': '0 0 25px rgba(59, 130, 246, 0.3)', 'border-color': 'rgba(59, 130, 246, 0.4)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+                .glass-panel {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+        .animated-bg {
+            background: linear-gradient(-45deg, #020617, #0f172a, #1e3a8a, #0f172a);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+    </style>
+
+</head>
+
+<body
+    class="animated-bg text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-500 selection:bg-blue-500 selection:text-white">
+
+    
+    <!-- Top Navigation Bar -->
+    <header
+        class="border-b border-slate-700/50 glass-panel backdrop-blur sticky top-0 z-40 px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div
+                class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                <i class="ph ph-heartbeat text-xl text-slate-100"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight tracking-tight flex items-center gap-2">
+                    MindMate <span
+                        class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200">2.0
+                        Triage</span>
+                </h1>
+                <p class="text-xs text-slate-400">Campus Early-Warning & Support</p>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="hidden md:flex items-center space-x-1 bg-slate-800/60 p-1 rounded-xl border border-slate-700/50">
+            <button onclick="switchTab('vent')" id="tab-vent"
+                class="tab-btn px-4 py-1.5 hover:scale-105 active:scale-95 rounded-lg text-sm font-medium transition-all bg-blue-600 text-white shadow-sm">
+                <i class="ph ph-chat-teardrop-dots mr-1.5"></i> Daily Vent
+            </button>
+            <button onclick="switchTab('chill')" id="tab-chill"
+                class="tab-btn px-4 py-1.5 hover:scale-105 active:scale-95 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-100">
+                <i class="ph ph-coffee mr-1.5"></i> Chill Zone
+            </button>
+            <button onclick="switchTab('analytics')" id="tab-analytics"
+                class="tab-btn px-4 py-1.5 hover:scale-105 active:scale-95 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-100">
+                <i class="ph ph-plant mr-1.5"></i> Insights & Growth
+            </button>
+            <button onclick="switchTab('chat')" id="tab-chat"
+                class="tab-btn px-4 py-1.5 hover:scale-105 active:scale-95 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-slate-100">
+                <i class="ph ph-chat-circle-dots mr-1.5"></i> Live Chat
+            </button>
+        </nav>
+
+        <!-- Header Actions (Privacy status & SOS) -->
+        <div class="flex items-center space-x-2">
+            <!-- Data Lock Badge -->
+            <div id="dataLockBadge"
+                class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-100 border border-blue-200 text-blue-700 text-xs font-mono"
+                title="Identity Hashed with SHA-256">
+                <i class="ph ph-lock-key text-sm"></i>
+                <span class="hidden sm:inline" id="lockStatusText">ID: #HASH-839A</span>
+            </div>
+            <!-- Sign Out Button -->
+            <a href="/logout"
+                class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-panel hover:bg-slate-800/40 text-slate-300 text-xs font-semibold transition shadow-sm border border-slate-700/50">
+                <i class="ph ph-sign-out text-sm"></i>
+                Sign Out
+            </a>
+
+            <!-- Emergency Break-Glass SOS Button -->
+            <button onclick="openSOSModal()"
+                class="bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-lg shadow-rose-900/40 transition">
+                <i class="ph ph-warning-circle text-base animate-pulse"></i>
+                <span>SOS</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Tab Bar (Bottom) -->
+    <div
+        class="md:hidden fixed bottom-0 left-0 right-0 z-40 glass-panel border-t border-slate-700/50 flex justify-around py-2.5 text-xs text-slate-400 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+        <button onclick="switchTab('vent')" class="flex flex-col items-center gap-1 focus:text-blue-600">
+            <i class="ph ph-chat-teardrop-dots text-lg"></i> Vent
+        </button>
+        <button onclick="switchTab('chill')" class="flex flex-col items-center gap-1 focus:text-blue-600">
+            <i class="ph ph-coffee text-lg"></i> Chill
+        </button>
+        <button onclick="switchTab('analytics')" class="flex flex-col items-center gap-1 focus:text-blue-600">
+            <i class="ph ph-plant text-lg"></i> Growth
+        </button>
+        <button onclick="switchTab('chat')" class="flex flex-col items-center gap-1 focus:text-blue-600">
+            <i class="ph ph-chat-circle-dots text-lg"></i> Live Chat
+        </button>
+
+        <a href="/logout" class="flex flex-col items-center gap-1 focus:text-rose-600 text-slate-400">
+            <i class="ph ph-sign-out text-lg"></i> Exit
+        </a>
+    </div>
+
+    <!-- Main App Body -->
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 pb-24 md:pb-8 flex flex-col justify-center">
+
+        <!-- 1. VENT SCREEN (DEFAULT) -->
+        <section id="screen-vent" class="space-y-6">
+            <!-- Dynamic Prompt Banner ("Anti-Survey Approach") -->
+            <div
+                class="bg-gradient-to-r from-blue-50 via-white to-slate-50 border border-blue-200 rounded-2xl p-4 md:p-5 flex items-start justify-between shadow-sm">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold uppercase tracking-wider text-blue-400" id="prompt-tag">The
+                            Battery Check</span>
+                        <span class="text-xs text-slate-400">• Anti-Survey Mode</span>
+                    </div>
+                    <p id="prompt-question" class="text-base md:text-lg font-medium text-slate-900">
+                        "What drained your battery today, and what recharged it?"
+                    </p>
+                </div>
+                <button onclick="rotatePrompt()"
+                    class="text-slate-500 hover:text-blue-600 p-2 rounded-lg bg-slate-800/60 hover:bg-slate-200 transition"
+                    title="New Prompt">
+                    <i class="ph ph-arrows-clockwise text-lg"></i>
+                </button>
+            </div>
+
+            <!-- Emoji Quick-Log Vibe Selector -->
+            <div class="glass-panel border border-slate-700/50 p-3.5 rounded-xl flex items-center justify-between shadow-sm">
+                <span class="text-xs text-slate-400 font-medium">Quick Vibe Check:</span>
+                <div class="flex space-x-2">
+                    <button onclick="selectVibe('🔋 Fully Charged', 'Energy is peak today!')"
+                        class="p-2 rounded-lg bg-slate-800/40 border border-slate-700/50 hover:bg-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-300 text-xl transition">⚡</button>
+                    <button onclick="selectVibe('☕ Caffeinated', 'Surviving on coffee and a dream.')"
+                        class="p-2 rounded-lg bg-slate-800/40 border border-slate-700/50 hover:bg-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-300 text-xl transition">☕</button>
+                    <button onclick="selectVibe('🫠 Melting Down', 'Everything is happening all at once.')"
+                        class="p-2 rounded-lg bg-slate-800/40 border border-slate-700/50 hover:bg-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-300 text-xl transition">🫠</button>
+                    <button onclick="selectVibe('🪫 Dead Battery', 'Zero fuel left in the tank.')"
+                        class="p-2 rounded-lg bg-slate-800/40 border border-slate-700/50 hover:bg-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-300 text-xl transition">🪫</button>
+                    <button onclick="selectVibe('🌧️ In the Clouds', 'Dissociating and overthinking.')"
+                        class="p-2 rounded-lg bg-slate-800/40 border border-slate-700/50 hover:bg-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-300 text-xl transition">🌧️</button>
+                </div>
+            </div>
+
+            <!-- Micro-Journaling Venting Box -->
+            <div class="glass-panel border border-slate-700/50 rounded-2xl p-4 relative shadow-lg">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-400 animate-pulse"></span>
+                        <span class="text-xs text-slate-400">Anonymous Channel (AI Triage Ready)</span>
+                    </div>
+                    <!-- Unmask Me feature -->
+                    <label class="flex items-center gap-2 cursor-pointer text-xs text-slate-400 hover:text-slate-100">
+                        <input type="checkbox" id="unmaskToggle" onchange="toggleUnmask()"
+                            class="rounded border-slate-600/50 text-blue-500 focus:ring-blue-400">
+                        <span>Unmask Me (Request Counselor)</span>
+                    </label>
+                </div>
+
+                <textarea id="journalInput" maxlength="280" oninput="updateCharCount()" rows="4"
+                    placeholder="Vent it out... Got too many tabs open in your brain? Type or hold microphone (Max 280 chars)."
+                    class="w-full bg-transparent border-0 text-slate-200 placeholder-slate-400 focus:ring-0 resize-none text-base leading-relaxed"></textarea>
+
+                <!-- Bottom Tools (Voice, Counter, Submit) -->
+                <div class="flex items-center justify-between pt-3 border-t border-slate-700/50">
+                    <div class="flex items-center space-x-2">
+                        <!-- Voice to text button -->
+                        <button id="voiceBtn" onclick="toggleSpeechRecognition()"
+                            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg glass-panel/5 hover:bg-blue-500/20 hover:scale-105 active:scale-95 transition-all duration-300 text-slate-400 hover:text-blue-700 border border-slate-700/50 shadow-sm text-xs transition">
+                            <i class="ph ph-microphone text-base" id="micIcon"></i>
+                            <span id="micText">Hold / Tap to Speak</span>
+                        </button>
+                        <span id="speechIndicator"
+                            class="hidden text-xs text-blue-600 animate-pulse font-mono">Listening...</span>
+                    </div>
+
+                    <div class="flex items-center space-x-3">
+                        <span id="charCount" class="text-xs font-mono text-slate-500">0 / 280</span>
+                        <button onclick="processTriage()"
+                            class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium text-xs px-4 py-2 rounded-lg flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition">
+                            <span>Send</span>
+                            <i class="ph ph-paper-plane-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Real-time AI Triage Simulator Feedback -->
+            <div id="triageResultBox" class="hidden rounded-xl border p-4 transition-all duration-300">
+                <div class="flex items-start justify-between">
+                    <div class="flex items-center gap-2">
+                        <div id="triageIcon" class="p-2 rounded-lg"></div>
+                        <div>
+                            <h3 id="triageTitle" class="text-sm font-bold"></h3>
+                            <p id="triageSubtitle" class="text-xs text-slate-400"></p>
+                        </div>
+                    </div>
+                    <span id="triageScoreTag" class="text-xs font-mono px-2 py-0.5 rounded border"></span>
+                </div>
+                <div id="triageActionContent"
+                    class="mt-3 text-xs leading-relaxed text-slate-300 pt-2 border-t border-slate-700/50"></div>
+            </div>
+        </section>
+
+        <!-- 2. CHILL ZONE TAB -->
+        <section id="screen-chill" class="hidden space-y-6">
+            <div class="text-center space-y-1">
+                <h2 class="text-xl font-bold text-slate-100">The Chill Zone</h2>
+                <p class="text-xs text-slate-400">Micro-tools for quick decompression & focus.</p>
+            </div>
+
+            <!-- Interactive Breathing Visualizer -->
+            <div
+                class="glass-panel border border-slate-700/50 shadow-sm rounded-2xl p-8 flex flex-col items-center justify-center relative overflow-hidden">
+                <div class="text-center mb-6">
+                    <h3 class="text-sm font-semibold text-blue-700">4-7-8 Breathing Anchor</h3>
+                    <p class="text-xs text-slate-400" id="breatheText">Breathe in as the circle expands... Breathe out
+                        as it contracts</p>
+                </div>
+
+                <!-- Animated Bubble -->
+                <div class="relative w-48 h-48 flex items-center justify-center my-4">
+                    <div class="absolute inset-0 bg-blue-300/30 rounded-full blur-xl"></div>
+                    <div
+                        class="w-28 h-28 bg-gradient-to-tr from-blue-400 to-indigo-500 rounded-full animate-breathe flex items-center justify-center shadow-2xl shadow-blue-500/30">
+                        <i class="ph ph-wind text-2xl text-slate-100"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Action Cards (Pomodoro, Lo-Fi, Grounding) -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div
+                    class="glass-panel border border-slate-700/50 shadow-sm p-4 rounded-xl space-y-2 hover:border-indigo-300 transition">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                        <i class="ph ph-timer text-lg"></i>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-100">5-Min Focus Reset</h4>
+                    <p class="text-xs text-slate-400">Clear exam mental fog with quick Pomodoro sprints.</p>
+                    <button onclick="startFocusTimer()"
+                        class="text-xs text-indigo-600 hover:text-indigo-500 font-medium">Start Timer →</button>
+                </div>
+
+                <div
+                    class="glass-panel border border-slate-700/50 shadow-sm p-4 rounded-xl space-y-2 hover:border-red-300 transition">
+                    <div class="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
+                        <i class="ph ph-youtube-logo text-lg"></i>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-100">Relaxing Bollywood</h4>
+                    <p class="text-xs text-slate-400">Soothing Bollywood melodies to calm your mind.</p>
+                    <a href="https://www.youtube.com/results?search_query=relaxing+bollywood+lofi+playlist" target="_blank"
+                        class="inline-block text-xs text-red-600 hover:text-red-500 font-medium">Open YouTube Playlist
+                        →</a>
+                </div>
+
+                <div
+                    class="glass-panel border border-slate-700/50 shadow-sm p-4 rounded-xl space-y-2 hover:border-blue-300 transition">
+                    <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <i class="ph ph-hand-palm text-lg"></i>
+                    </div>
+                    <h4 class="text-sm font-semibold text-slate-100">5-4-3-2-1 Grounding</h4>
+                    <p class="text-xs text-slate-400">Notice 5 things you can see, 4 you can touch...</p>
+                    <button
+                        onclick="alert('5 Things you see\n4 Things you feel\n3 Things you hear\n2 Things you smell\n1 Thing you taste')"
+                        class="text-xs text-blue-600 hover:text-blue-500 font-medium">Launch Exercise →</button>
+                </div>
+            </div>
+
+            <!-- Interactive Focus Timer -->
+            <div id="focus-timer-container" class="hidden bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl p-6 text-center shadow-md relative overflow-hidden transition-all duration-500 mt-6">
+                <!-- Background Pulse Animation -->
+                <div id="timer-pulse" class="absolute inset-0 bg-indigo-100 rounded-2xl opacity-0 scale-95 transition-all duration-1000 ease-in-out"></div>
+                
+                <h3 class="text-sm font-semibold text-indigo-700 mb-2 relative z-10">Study Sprint Focus</h3>
+                <div id="timer-display" class="text-5xl font-bold font-mono text-white tracking-widest my-4 relative z-10 drop-shadow-[0_0_15px_rgba(99,102,241,0.2)]">05:00</div>
+                <div class="flex justify-center gap-3 relative z-10">
+                    <button onclick="pauseFocusTimer()" id="pause-timer-btn" class="hidden glass-panel hover:glass-panel/5 text-slate-300 text-xs font-semibold px-4 py-2 rounded-lg transition shadow-sm border border-slate-700/50">Pause</button>
+                    <button onclick="stopFocusTimer()" class="bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold px-4 py-2 rounded-lg transition shadow-sm border border-rose-200">End Early</button>
+                </div>
+            </div>
+            <!-- Anonymous Scribble Board -->
+            <div class="glass-panel border border-slate-700/50 shadow-sm rounded-2xl p-6 mt-6">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-100">Anonymous Scribble Board</h3>
+                        <p class="text-xs text-slate-500">Write whatever is on your mind. No names, no judgment.</p>
+                    </div>
+                    <div class="w-8 h-8 rounded-lg bg-pink-100 text-pink-600 flex items-center justify-center">
+                        <i class="ph ph-scribble-loop text-lg"></i>
+                    </div>
+                </div>
+                
+                <div id="scribble-board-list" class="bg-slate-800/40 border border-slate-700/50 rounded-xl h-64 p-4 overflow-y-auto space-y-3 mb-4 shadow-inner flex flex-col-reverse">
+                    <!-- Scribbles will be populated here by JS -->
+                    <div class="text-center text-xs text-slate-400 mt-10">Loading scribbles...</div>
+                </div>
+
+                <div id="scribble-canvas-container" class="hidden flex flex-col space-y-2 mb-4 glass-panel/5 p-3 rounded-xl border border-slate-700/50">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-slate-300">Draw Sketch</span>
+                        <div class="flex items-center space-x-3">
+                            <input type="color" id="draw-color" value="#000000" class="w-6 h-6 rounded cursor-pointer border-0 p-0" title="Pen Color" />
+                            <button onclick="undoScribbleStroke()" class="text-slate-500 hover:text-slate-300 text-xs p-1" title="Undo"><i class="ph ph-arrow-u-up-left text-lg"></i></button>
+                            <button onclick="clearScribbleCanvas()" class="text-slate-500 hover:text-rose-600 text-xs p-1" title="Clear"><i class="ph ph-trash text-lg"></i></button>
+                            <button onclick="toggleScribbleCanvas()" class="text-slate-500 hover:text-slate-300 text-xs p-1" title="Close Canvas"><i class="ph ph-x text-lg"></i></button>
+                        </div>
+                    </div>
+                    <canvas id="scribble-canvas" width="600" height="200" class="w-full glass-panel border border-slate-700/50 rounded cursor-crosshair shadow-sm touch-none"></canvas>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <button onclick="toggleScribbleCanvas()" class="text-slate-500 hover:text-pink-600 p-2 rounded-lg bg-slate-800/60 hover:bg-slate-200 transition" title="Draw Sketch">
+                        <i class="ph ph-pencil-simple text-lg"></i>
+                    </button>
+                    <input type="text" id="new-scribble-input" placeholder="Scribble something anonymous..." class="flex-1 bg-slate-800/40 border border-slate-700/50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-pink-300 focus:ring-1 focus:ring-pink-300" maxlength="150" onkeypress="handleScribbleKeyPress(event)" />
+                    <button onclick="postScribble()" class="bg-pink-600 hover:bg-pink-500 text-white font-medium text-sm px-4 py-2 rounded-lg flex items-center gap-1.5 shadow-md shadow-pink-500/20 transition">
+                        <span>Drop It</span>
+                        <i class="ph ph-paper-plane-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. ANALYTICS & FORGIVING STREAKS TAB -->
+        <section id="screen-analytics" class="hidden space-y-6">
+            <div class="text-center space-y-1">
+                <h2 class="text-xl font-bold text-slate-100">Your Personal Insights</h2>
+                <p class="text-xs text-slate-400">Zero-guilt tracking. Missing a day never resets your streak to zero.
+                </p>
+            </div>
+
+            <!-- Growth Plant Streak (Guilt-Free) -->
+            <div class="glass-panel border border-slate-700/50 shadow-sm rounded-2xl p-5 flex items-center justify-between">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold text-blue-600 uppercase tracking-wide">Consistency
+                            Bonsai</span>
+                        <span
+                            class="bg-blue-100 border border-blue-200 text-blue-700 text-[10px] px-2 py-0.5 rounded-full">Forgiving
+                            Streak</span>
+                    </div>
+                    <p id="bonsaiLevelText" class="text-lg font-bold text-slate-100">Level 1 Seed 🌱</p>
+                    <p id="bonsaiDescText" class="text-xs text-slate-400 max-w-sm">You've checked in 0 days this month. Even when you miss
+                        a day, your plant retains its health.</p>
+                </div>
+                <div
+                    class="w-16 h-16 rounded-2xl bg-blue-50 border border-blue-200 flex items-center justify-center text-3xl">
+                    🪴
+                </div>
+            </div>
+
+            <!-- Mood Heatmap Simulation -->
+            <div class="glass-panel border border-slate-700/50 shadow-sm rounded-2xl p-5 space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-semibold text-slate-100">Monthly Mood Flow</h3>
+                    <span id="heatmapMonthText" class="text-xs text-slate-500">September 2026</span>
+                </div>
+                <div class="grid grid-cols-7 gap-1.5 text-center text-[10px] text-slate-500 font-mono">
+                    <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+                </div>
+                <div class="grid grid-cols-7 gap-1.5" id="heatmapGrid">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Spotify-Wrapped Style Insight -->
+            <div
+                class="bg-gradient-to-r from-purple-50 via-indigo-50 to-white border border-purple-200 shadow-sm rounded-2xl p-5 flex items-center gap-4">
+                <div
+                    class="w-12 h-12 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center shrink-0">
+                    <i class="ph ph-sparkle text-2xl"></i>
+                </div>
+                <div class="space-y-0.5">
+                    <h4 class="text-sm font-bold text-purple-900">Wrapped Insight: The "Tuesday Slump"</h4>
+                    <p class="text-xs text-slate-300">
+                        "You tend to log lower energy on Tuesday afternoons after your back-to-back labs. Maybe schedule
+                        a walk or skip the extra espresso then!"
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. LIVE CHAT TAB -->
+        <section id="screen-chat" class="hidden h-[70vh] flex-col space-y-4">
+            <div class="text-center space-y-1">
+                <h2 class="text-xl font-bold text-slate-100">Live Counselor Chat</h2>
+                <p class="text-xs text-slate-400">Directly connect with a campus counselor in real-time.</p>
+            </div>
+            
+            <div class="flex-1 glass-panel border border-slate-700/50 shadow-sm rounded-2xl flex flex-col overflow-hidden relative">
+                <!-- Chat History Area -->
+                <div id="chatHistory" class="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col">
+                    <div class="text-center text-xs text-slate-500 my-4">Initializing secure connection...</div>
+                </div>
+                
+                <!-- Chat Input Area -->
+                <div class="p-3 bg-slate-900/60 border-t border-slate-700/50 flex items-center gap-2">
+                    <input type="text" id="chatInput" placeholder="Type a message to the counselor..." 
+                           class="flex-1 bg-slate-800/80 border border-slate-600/50 rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" 
+                           onkeypress="if(event.key === 'Enter') sendChatMessage()" />
+                    <button onclick="sendChatMessage()" 
+                            class="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-lg shadow-md transition-all flex items-center justify-center shrink-0">
+                        <i class="ph ph-paper-plane-right text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+
+
+    </main>
+
+    <!-- SOS / BREAK GLASS MODAL -->
+    <div id="sosModal"
+        class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-[#1a1418] border-2 border-rose-600/80 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div class="flex items-center space-x-3 text-rose-500">
+                <i class="ph ph-warning-octagon text-3xl animate-bounce"></i>
+                <div>
+                    <h3 class="font-bold text-lg text-slate-100">Emergency Support (Break-Glass)</h3>
+                    <p class="text-xs text-rose-300/80">Direct bypass: AI is disabled for this channel.</p>
+                </div>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+                If you are experiencing immediate crisis, thoughts of self-harm, or feel unsafe, please connect with
+                real human support right now.
+            </p>
+
+            <div class="space-y-2 pt-2">
+                <a href="tel:988"
+                    class="flex items-center justify-between p-3 rounded-xl bg-rose-600/20 border border-rose-500/40 hover:bg-rose-600/30 text-rose-200 transition">
+                    <div>
+                        <div class="font-bold text-xs">Suicide & Crisis Lifeline</div>
+                        <div class="text-[11px] text-slate-400">Call or Text 24/7 (Free & Confidential)</div>
+                    </div>
+                    <span class="font-mono text-sm font-bold bg-rose-600 px-2 py-1 rounded text-slate-100">988</span>
+                </a>
+
+                <a href="tel:911"
+                    class="flex items-center justify-between p-3 rounded-xl bg-slate-800/80 border border-slate-700 hover:bg-slate-800 text-slate-200 transition">
+                    <div>
+                        <div class="font-bold text-xs">Campus Crisis Security</div>
+                        <div class="text-[11px] text-slate-400">Immediate on-campus response</div>
+                    </div>
+                    <span class="font-mono text-sm font-bold bg-slate-700 px-2 py-1 rounded text-slate-100">Ext. 5555</span>
+                </a>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="closeSOSModal()"
+                    class="px-4 py-1.5 text-xs text-slate-400 hover:text-white transition">
+                    Close Window
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // 1. DYNAMIC PROMPT SYSTEM ("Anti-Survey" Approach)
+        const prompts = [
+            { tag: "The Battery Check", text: "What drained your battery today, and what recharged it?" },
+            { tag: "The Brain Dump", text: "Got a lot of tabs open in your brain right now? Vent it all out here, no filter needed." },
+            { tag: "The Time Machine", text: "If you could skip one class or event this week, what would it be and why?" },
+            { tag: "The Pop Culture Prompt", text: "If your current mood was a movie genre or a video game, what would it be right now?" },
+            { tag: "The Grateful / Grumble", text: "Name one thing that went perfectly today, and one thing that was incredibly annoying." }
+        ];
+        let promptIndex = 0;
+
+        function rotatePrompt() {
+            promptIndex = (promptIndex + 1) % prompts.length;
+            document.getElementById('prompt-tag').innerText = prompts[promptIndex].tag;
+            document.getElementById('prompt-question').innerText = `"${prompts[promptIndex].text}"`;
+        }
+
+        // 2. EMOJI QUICK-LOG
+        function selectVibe(vibe, desc) {
+            const input = document.getElementById('journalInput');
+            input.value = `[Vibe: ${vibe}] - ${desc} `;
+            updateCharCount();
+            input.focus();
+            logCheckIn(vibe);
+        }
+
+        // 3. CHARACTER COUNT
+        function updateCharCount() {
+            const len = document.getElementById('journalInput').value.length;
+            document.getElementById('charCount').innerText = `${len} / 280`;
+        }
+
+        // 4. TAB NAVIGATION
+        function switchTab(tab) {
+            const screens = ['vent', 'chill', 'analytics', 'chat'];
+            screens.forEach(s => {
+                document.getElementById(`screen-${s}`).classList.add('hidden');
+                const btn = document.getElementById(`tab-${s}`);
+                if (btn) {
+                    btn.classList.remove('bg-purple-600', 'bg-blue-600', 'text-white', 'shadow-sm');
+                    btn.classList.add('text-slate-400');
+                }
+            });
+
+            document.getElementById(`screen-${tab}`).classList.remove('hidden', 'flex');
+            if (tab === 'chat') {
+                document.getElementById(`screen-${tab}`).classList.add('flex');
+            }
+            
+            const activeBtn = document.getElementById(`tab-${tab}`);
+            if (activeBtn) {
+                activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+                activeBtn.classList.remove('text-slate-400');
+            }
+            
+            if (tab === 'analytics') {
+                renderInsights();
+            } else if (tab === 'chat') {
+                loadChatMessages();
+                if (!window.chatPoll) {
+                    window.chatPoll = setInterval(loadChatMessages, 3000);
+                }
+            }
+            
+            if (tab !== 'chat' && window.chatPoll) {
+                clearInterval(window.chatPoll);
+                window.chatPoll = null;
+            }
+        }
+
+        // 5. UNMASK ME TOGGLE
+        function toggleUnmask() {
+            const checked = document.getElementById('unmaskToggle').checked;
+            const badge = document.getElementById('dataLockBadge');
+            const text = document.getElementById('lockStatusText');
+
+            if (checked) {
+                badge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 border border-amber-500/50 text-amber-400 text-xs font-mono";
+                text.innerText = "UNMASKED: John Doe (#2026-CS)";
+            } else {
+                badge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-100 border border-blue-200 text-blue-700 text-xs font-mono";
+                text.innerText = "ID: #HASH-839A";
+            }
+        }
+
+        // 6. VOICE-TO-TEXT INTEGRATION (Web Speech API)
+        let recognition;
+        let isRecording = false;
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+
+            recognition.onstart = () => {
+                isRecording = true;
+                document.getElementById('micText').innerText = "Listening...";
+                document.getElementById('speechIndicator').classList.remove('hidden');
+                document.getElementById('micIcon').className = "ph ph-waveform text-base text-rose-400 animate-pulse";
+            };
+
+            recognition.onresult = (e) => {
+                const transcript = e.results[0][0].transcript;
+                const input = document.getElementById('journalInput');
+                input.value += (input.value ? " " : "") + transcript;
+                updateCharCount();
+            };
+
+            recognition.onend = () => {
+                isRecording = false;
+                document.getElementById('micText').innerText = "Hold / Tap to Speak";
+                document.getElementById('speechIndicator').classList.add('hidden');
+                document.getElementById('micIcon').className = "ph ph-microphone text-base";
+            };
+
+            recognition.onerror = () => {
+                recognition.stop();
+            };
+        }
+
+        function toggleSpeechRecognition() {
+            if (!recognition) {
+                alert("Speech recognition is not supported in this browser. Please type in your vent!");
+                return;
+            }
+            if (isRecording) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        }
+
+        // 7. AI ROUTING / TRIAGE CONTROLLER SIMULATION
+        function processTriage() {
+            const text = document.getElementById('journalInput').value.trim();
+            if (!text) {
+                alert("Please write or speak something before sending.");
+                return;
+            }
+            
+            let currentVibe = "vent";
+            const vibeMatch = text.match(/\[Vibe: (.*?)\]/);
+            if (vibeMatch) {
+                currentVibe = vibeMatch[1];
+            }
+            logCheckIn(currentVibe);
+
+            const lower = text.toLowerCase();
+            const resultBox = document.getElementById('triageResultBox');
+            const triageIcon = document.getElementById('triageIcon');
+            const triageTitle = document.getElementById('triageTitle');
+            const triageSubtitle = document.getElementById('triageSubtitle');
+            const triageScoreTag = document.getElementById('triageScoreTag');
+            const triageActionContent = document.getElementById('triageActionContent');
+
+            resultBox.classList.remove('hidden');
+
+            // HIGH RISK KEYWORDS (Triggers Break-Glass alert)
+            const highKeywords = ['suicide', 'kill myself', 'end it all', 'die', 'hurt myself', 'hang myself'];
+            const isHigh = highKeywords.some(w => lower.includes(w));
+
+            // MODERATE RISK KEYWORDS (Routes to Counselor Dashboard)
+            const modKeywords = ['hopeless', 'isolate', 'depressed', 'can\'t go on', 'cant do this anymore', 'worthless', 'giving up', 'crying all day'];
+            const isMod = modKeywords.some(w => lower.includes(w));
+
+            const isUnmasked = document.getElementById('unmaskToggle').checked;
+
+            if (isHigh) {
+                // Send to backend
+                fetch('/api/log_triage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        snippet: text,
+                        risk_level: 'high',
+                        is_unmasked: true
+                    })
+                }).catch(e => console.error("Failed to log triage:", e));
+
+                // Triage High Scenario
+                resultBox.className = "rounded-xl border border-rose-500/50 bg-rose-950/30 p-4 transition-all";
+                triageIcon.className = "p-2 rounded-lg bg-rose-600/30 text-rose-300";
+                triageIcon.innerHTML = `<i class="ph ph-warning-octagon text-2xl"></i>`;
+                triageTitle.innerText = "CRITICAL: High-Risk Safety Override Triggered";
+                triageTitle.className = "text-sm font-bold text-rose-200";
+                triageSubtitle.innerText = "System bypassed queue and sent high-priority alert to Campus Crisis Team.";
+                triageScoreTag.className = "text-xs font-mono px-2 py-0.5 rounded border border-rose-500/40 bg-rose-600/20 text-rose-300";
+                triageScoreTag.innerText = "Score: 95/100 (HIGH RISK)";
+                triageActionContent.innerHTML = `
+          <strong>Action Executed:</strong> Anonymization rules bypassed. Direct ping dispatched to Crisis Response Unit with geolocation and log snippet. Please speak with someone immediately.
+          <div class="mt-2"><button onclick="openSOSModal()" class="bg-rose-600 text-white px-3 py-1 rounded text-xs font-semibold">Open Emergency Hotline</button></div>
+        `;
+                openSOSModal();
+            } else if (isMod || isUnmasked) {
+                // Send to backend
+                fetch('/api/log_triage', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        snippet: text,
+                        risk_level: 'moderate',
+                        is_unmasked: isUnmasked
+                    })
+                }).catch(e => console.error("Failed to log triage:", e));
+
+                // Triage Moderate Scenario
+                resultBox.className = "rounded-xl border border-amber-500/50 bg-amber-950/20 p-4 transition-all";
+                triageIcon.className = "p-2 rounded-lg bg-amber-600/30 text-amber-300";
+                triageIcon.innerHTML = `<i class="ph ph-user-circle-gear text-2xl"></i>`;
+                triageTitle.innerText = isUnmasked ? "Dispatched: Unmask Request Received" : "Moderate Risk Flagged: Queued for Clinician Review";
+                triageTitle.className = "text-sm font-bold text-amber-200";
+                triageSubtitle.innerText = "Text snippet securely delivered to Campus Counselor Dashboard.";
+                triageScoreTag.className = "text-xs font-mono px-2 py-0.5 rounded border border-amber-500/40 bg-amber-600/20 text-amber-300";
+                triageScoreTag.innerText = "Score: 62/100 (MODERATE)";
+                triageActionContent.innerHTML = `
+          <strong>Action Executed:</strong> Sent to human counselor triage queue. If approved by counselor, an invite for a walk-in chat will be dispatched to your student email.
+        `;
+            } else {
+                // Triage Low Scenario (Automated End-Task)
+                resultBox.className = "rounded-xl border border-purple-500/40 bg-purple-950/20 p-4 transition-all";
+                triageIcon.className = "p-2 rounded-lg bg-purple-600/30 text-purple-300";
+                triageIcon.innerHTML = `<i class="ph ph-sparkle text-2xl"></i>`;
+                triageTitle.innerText = "Low Risk: Autonomous Wellness Nudge Activated";
+                triageTitle.className = "text-sm font-bold text-purple-200";
+                triageSubtitle.innerText = "No counselor required. Handled 100% autonomously by MindMate.";
+                triageScoreTag.className = "text-xs font-mono px-2 py-0.5 rounded border border-purple-500/40 bg-purple-600/20 text-purple-300";
+                triageScoreTag.innerText = "Score: 18/100 (LOW)";
+                triageActionContent.innerHTML = `
+          <strong>Suggested Resource:</strong> We noticed signs of normal exam/daily fatigue. Head to the 
+          <a href="javascript:switchTab('chill')" class="text-purple-400 underline font-semibold">Chill Zone</a> 
+          for a 5-minute breathing session and study lo-fi beats.
+        `;
+            }
+        }
+
+        // 9. MODAL CONTROLS
+        function openSOSModal() {
+            document.getElementById('sosModal').classList.remove('hidden');
+            
+            // Alert the counselor dashboard immediately
+            fetch('/api/log_triage', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    snippet: "🚨 EMERGENCY: User manually triggered the SOS Break-Glass Button from the header!",
+                    risk_level: 'high',
+                    is_unmasked: true
+                })
+            }).catch(e => console.error("Failed to log SOS:", e));
+        }
+        function closeSOSModal() {
+            document.getElementById('sosModal').classList.add('hidden');
+        }
+
+        // 10. DYNAMIC PERSONAL INSIGHTS (HEATMAP & BONSAI)
+        async function logCheckIn(vibe) {
+            try {
+                await fetch('/api/check_in', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ vibe: vibe })
+                });
+            } catch(e) {
+                console.error("Failed to log check in:", e);
+            }
+        }
+
+        async function renderInsights() {
+            try {
+                const response = await fetch('/api/insights');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const heatmapGrid = document.getElementById('heatmapGrid');
+                    heatmapGrid.innerHTML = ''; 
+                    
+                    document.getElementById('heatmapMonthText').innerText = data.month;
+                    
+                    const checkIns = data.check_ins;
+                    const numDays = data.num_days;
+                    const year = data.year;
+                    const month = data.month;
+                    let streakCount = Object.keys(checkIns).length;
+                    
+                    const bonsaiLevel = Math.min(Math.floor(streakCount / 3) + 1, 5); 
+                    const plantEmoji = ['🌱', '🌿', '🪴', '🌳', '🌸'][bonsaiLevel-1];
+                    document.getElementById('bonsaiLevelText').innerText = `Level ${bonsaiLevel} Mindful Sprout ${plantEmoji}`;
+                    document.getElementById('bonsaiDescText').innerText = `You've checked in ${streakCount} days this month. Even when you miss a day, your plant retains its health.`;
+                    
+                    const colorMap = {
+                        '🔋 Fully Charged': 'bg-blue-500/80 border-blue-400 text-white shadow-[0_0_8px_rgba(16,185,129,0.5)]',
+                        '☕ Caffeinated': 'bg-amber-500/80 border-amber-400 text-white shadow-[0_0_8px_rgba(245,158,11,0.5)]',
+                        '🫠 Melting Down': 'bg-rose-500/80 border-rose-400 text-white shadow-[0_0_8px_rgba(244,63,94,0.5)]',
+                        '🪫 Dead Battery': 'bg-slate-600/80 border-slate-500 text-white',
+                        '🌧️ In the Clouds': 'bg-indigo-500/80 border-indigo-400 text-white shadow-[0_0_8px_rgba(99,102,241,0.5)]'
+                    };
+                    
+                    const now = new Date();
+                    const yearStr = now.getFullYear();
+                    const monthStr = (now.getMonth() + 1).toString().padStart(2, '0');
+                    
+                    for (let i = 1; i <= numDays; i++) {
+                        const dayStr = i.toString().padStart(2, '0');
+                        const dateKey = `${yearStr}-${monthStr}-${dayStr}`;
+                        const vibe = checkIns[dateKey];
+                        
+                        const div = document.createElement('div');
+                        div.className = "w-full aspect-square rounded flex items-center justify-center text-lg";
+                        
+                        if (vibe) {
+                            div.className += " " + (colorMap[vibe] || 'bg-slate-700 border-slate-600');
+                            div.innerText = vibe.split(' ')[0]; // just the emoji
+                            div.title = `${dateKey}: ${vibe}`;
+                        } else {
+                            div.className += " bg-slate-800/40 border border-slate-700/30";
+                        }
+                        
+                        heatmapGrid.appendChild(div);
+                    }
+                }
+            } catch(e) {
+                console.error("Failed to fetch insights:", e);
+            }
+        }
+
+        // 11. FOCUS TIMER LOGIC
+        let focusTimerInterval;
+        let focusTimeLeft = 300; // 5 minutes in seconds
+        let isTimerPaused = false;
+
+        function startFocusTimer() {
+            // Show the timer UI
+            const container = document.getElementById('focus-timer-container');
+            container.classList.remove('hidden');
+            container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Start Pulse Animation
+            document.getElementById('timer-pulse').classList.add('scale-110', 'opacity-50');
+            document.getElementById('timer-pulse').classList.remove('scale-95', 'opacity-0');
+            
+            // Reset state
+            clearInterval(focusTimerInterval);
+            focusTimeLeft = 300;
+            isTimerPaused = false;
+            updateTimerDisplay();
+            
+            // Start interval
+            focusTimerInterval = setInterval(() => {
+                if (!isTimerPaused) {
+                    focusTimeLeft--;
+                    updateTimerDisplay();
+                    
+                    // Toggle pulse animation for breathing effect every second
+                    const pulse = document.getElementById('timer-pulse');
+                    if(focusTimeLeft % 2 === 0) {
+                        pulse.classList.replace('scale-110', 'scale-95');
+                        pulse.classList.replace('opacity-50', 'opacity-20');
+                    } else {
+                        pulse.classList.replace('scale-95', 'scale-110');
+                        pulse.classList.replace('opacity-20', 'opacity-50');
+                    }
+
+                    if (focusTimeLeft <= 0) {
+                        clearInterval(focusTimerInterval);
+                        alert("Sprint Complete! Great focus.");
+                        stopFocusTimer();
+                    }
+                }
+            }, 1000);
+            
+            document.getElementById('pause-timer-btn').classList.remove('hidden');
+            document.getElementById('pause-timer-btn').innerText = "Pause";
+        }
+
+        function pauseFocusTimer() {
+            isTimerPaused = !isTimerPaused;
+            const btn = document.getElementById('pause-timer-btn');
+            btn.innerText = isTimerPaused ? "Resume" : "Pause";
+        }
+
+        function stopFocusTimer() {
+            clearInterval(focusTimerInterval);
+            document.getElementById('focus-timer-container').classList.add('hidden');
+            document.getElementById('timer-pulse').classList.remove('scale-110', 'opacity-50', 'scale-95', 'opacity-20');
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(focusTimeLeft / 60).toString().padStart(2, '0');
+            const s = (focusTimeLeft % 60).toString().padStart(2, '0');
+            document.getElementById('timer-display').innerText = `${m}:${s}`;
+        }
+        // 12. ANONYMOUS SCRIBBLE BOARD LOGIC
+        let fetchScribblesInterval;
+
+        async function fetchScribbles() {
+            try {
+                const response = await fetch('/api/scribbles');
+                const data = await response.json();
+                if (data.success) {
+                    const list = document.getElementById('scribble-board-list');
+                    list.innerHTML = '';
+                    if (data.scribbles.length === 0) {
+                        list.innerHTML = '<div class="text-center text-xs text-slate-400 mt-10">No scribbles yet. Be the first!</div>';
+                    } else {
+                        data.scribbles.forEach(scribble => {
+                            const el = document.createElement('div');
+                            el.className = 'glass-panel border border-slate-700/50 rounded-lg p-3 shadow-sm break-words relative group';
+                            let contentHtml = '';
+                            if (scribble.content.startsWith('data:image/')) {
+                                contentHtml = `<img src="${scribble.content}" alt="Sketch" class="max-w-full rounded border border-slate-100" />`;
+                            } else {
+                                contentHtml = `<p class="text-sm text-slate-300 pr-6">${scribble.content}</p>`;
+                            }
+                            
+                            let deleteBtnHtml = '';
+                            if (scribble.is_mine) {
+                                deleteBtnHtml = `<button onclick="deleteScribble(${scribble.id})" class="absolute top-2 right-2 text-slate-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition" title="Delete Scribble"><i class="ph ph-trash"></i></button>`;
+                            }
+                            
+                            el.innerHTML = `
+                                ${deleteBtnHtml}
+                                ${contentHtml}
+                                <div class="text-[10px] text-slate-400 mt-1 text-right">${scribble.timestamp}</div>
+                            `;
+                            list.appendChild(el);
+                        });
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch scribbles', err);
+            }
+        }
+
+        async function postScribble() {
+            const container = document.getElementById('scribble-canvas-container');
+            const isCanvasVisible = container && !container.classList.contains('hidden');
+            let content = '';
+
+            if (isCanvasVisible && canvasHasDrawing) {
+                content = canvas.toDataURL('image/png');
+            } else {
+                const input = document.getElementById('new-scribble-input');
+                content = input.value.trim();
+                input.value = '';
+            }
+            
+            if (!content) return;
+
+            try {
+                const response = await fetch('/api/scribbles', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    if (isCanvasVisible) {
+                        clearScribbleCanvas();
+                        toggleScribbleCanvas();
+                    }
+                    fetchScribbles();
+                }
+            } catch (err) {
+                console.error('Failed to post scribble', err);
+            }
+        }
+
+        async function deleteScribble(id) {
+            if (!confirm('Are you sure you want to delete this scribble?')) return;
+            try {
+                const response = await fetch(`/api/scribbles/${id}`, { method: 'DELETE' });
+                const data = await response.json();
+                if (data.success) {
+                    fetchScribbles();
+                } else {
+                    alert('Could not delete scribble.');
+                }
+            } catch (err) {
+                console.error('Failed to delete scribble', err);
+            }
+        }
+
+        function handleScribbleKeyPress(e) {
+            if (e.key === 'Enter') {
+                postScribble();
+            }
+        }
+
+        // Add to switchTab logic to start polling when chill zone is active
+        const originalSwitchTab = switchTab;
+        switchTab = function(tabId) {
+            originalSwitchTab(tabId);
+            if (tabId === 'chill') {
+                fetchScribbles();
+                fetchScribblesInterval = setInterval(fetchScribbles, 5000);
+            } else {
+                clearInterval(fetchScribblesInterval);
+            }
+        };
+
+        // 13. SCRIBBLE CANVAS LOGIC
+        let canvas, ctx, isDrawing = false;
+        let strokeHistory = [];
+        let currentStroke = [];
+        let canvasHasDrawing = false;
+
+        function toggleScribbleCanvas() {
+            const container = document.getElementById('scribble-canvas-container');
+            const isHidden = container.classList.contains('hidden');
+            if (isHidden) {
+                container.classList.remove('hidden');
+                initScribbleCanvas();
+            } else {
+                container.classList.add('hidden');
+            }
+        }
+
+        function initScribbleCanvas() {
+            if (canvas) return; // already initialized
+            canvas = document.getElementById('scribble-canvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set initial background to white so toDataURL doesn't have transparent background
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+
+            // Touch support
+            canvas.addEventListener('touchstart', (e) => { e.preventDefault(); startDrawing(e.touches[0]); }, {passive: false});
+            canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e.touches[0]); }, {passive: false});
+            canvas.addEventListener('touchend', stopDrawing);
+        }
+
+        function getMousePos(evt) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            return {
+                x: (evt.clientX - rect.left) * scaleX,
+                y: (evt.clientY - rect.top) * scaleY
+            };
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            canvasHasDrawing = true;
+            currentStroke = [];
+            const pos = getMousePos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+            const color = document.getElementById('draw-color').value;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            currentStroke.push({x: pos.x, y: pos.y, color: color});
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const pos = getMousePos(e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            currentStroke.push({x: pos.x, y: pos.y, color: document.getElementById('draw-color').value});
+        }
+
+        function stopDrawing() {
+            if (isDrawing) {
+                isDrawing = false;
+                strokeHistory.push(currentStroke);
+            }
+        }
+
+        function clearScribbleCanvas() {
+            if (!ctx) return;
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            strokeHistory = [];
+            canvasHasDrawing = false;
+        }
+
+        function undoScribbleStroke() {
+            if (!ctx || strokeHistory.length === 0) return;
+            strokeHistory.pop();
+            
+            // Redraw everything
+            ctx.fillStyle = "white";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (strokeHistory.length === 0) {
+                canvasHasDrawing = false;
+                return;
+            }
+            
+            strokeHistory.forEach(stroke => {
+                if (stroke.length === 0) return;
+                ctx.beginPath();
+                ctx.moveTo(stroke[0].x, stroke[0].y);
+                ctx.strokeStyle = stroke[0].color;
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                for (let i = 1; i < stroke.length; i++) {
+                    ctx.lineTo(stroke[i].x, stroke[i].y);
+                }
+                ctx.stroke();
+            });
+        }
+
+        // 11. LIVE CHAT SYSTEM
+        async function loadChatMessages() {
+            try {
+                const res = await fetch('/api/chat/messages');
+                const data = await res.json();
+                
+                if (data.success) {
+                    const container = document.getElementById('chatHistory');
+                    const wasAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 20;
+                    
+                    container.innerHTML = '';
+                    if (data.messages.length === 0) {
+                        container.innerHTML = `<div class="text-center text-xs text-slate-500 my-4">Send a message to initiate the chat. A counselor will respond soon.</div>`;
+                    } else {
+                        data.messages.forEach(msg => {
+                            const isUser = msg.sender_type === 'user';
+                            const alignment = isUser ? 'self-end' : 'self-start';
+                            const bgColor = isUser ? 'bg-blue-600 text-white' : 'bg-slate-700/80 text-slate-100 border border-slate-600/50';
+                            const borderRadius = isUser ? 'rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-sm' : 'rounded-tl-2xl rounded-tr-2xl rounded-bl-sm rounded-br-2xl';
+                            const senderName = isUser ? 'You' : 'Counselor';
+                            
+                            const div = document.createElement('div');
+                            div.className = `max-w-[80%] ${alignment} flex flex-col mt-2`;
+                            div.innerHTML = `
+                                <span class="text-[10px] text-slate-400 mb-0.5 mx-1 ${isUser ? 'text-right' : 'text-left'}">${senderName} • ${msg.timestamp.split(' ')[1]}</span>
+                                <div class="${bgColor} ${borderRadius} px-4 py-2.5 text-sm shadow-sm whitespace-pre-wrap">${msg.message}</div>
+                            `;
+                            container.appendChild(div);
+                        });
+                    }
+                    
+                    if (wasAtBottom) {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                }
+            } catch (e) {
+                console.error("Chat load error:", e);
+            }
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            input.value = '';
+            
+            try {
+                const res = await fetch('/api/chat/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                if (res.ok) {
+                    loadChatMessages();
+                }
+            } catch (e) {
+                console.error("Chat send error:", e);
+            }
+        }
+    </script>
+</body>
+</html>

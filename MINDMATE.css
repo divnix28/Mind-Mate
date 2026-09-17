@@ -1,0 +1,60 @@
+/* style.css */
+
+/* 
+  Tailwind base injections (Optional if using CDN, 
+  but good practice if you ever switch to a build step) 
+*/
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 
+  Custom Theme Colors & Settings 
+  (Replaces the tailwind.config script in the HTML)
+*/
+:root {
+    --cozy-bg: #12141a;
+    --cozy-card: #1a1e28;
+    --cozy-border: #282f40;
+    --cozy-accent: #8b5cf6;
+    --cozy-soft: #a5b4fc;
+}
+
+/* Base Body Styles */
+body {
+    background-color: #0e1117;
+    color: #f1f5f9;
+    /* text-slate-100 */
+}
+
+/* 
+  Custom Animations 
+  Specifically for the Chill Zone Breathing Visualizer[cite: 1]
+*/
+@keyframes breatheAnimation {
+
+    0%,
+    100% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+
+    50% {
+        transform: scale(1.6);
+        opacity: 0.95;
+    }
+}
+
+.animate-breathe {
+    animation: breatheAnimation 8s ease-in-out infinite;
+}
+
+/* Hide scrollbar for a cleaner look on the vent text area */
+textarea::-webkit-scrollbar {
+    width: 6px;
+}
+
+textarea::-webkit-scrollbar-thumb {
+    background-color: #334155;
+    border-radius: 4px;
+}

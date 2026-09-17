@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MindMate | Welcome</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                extend: {
+                    colors: {
+                        cozy: {
+                            bg: '#0f172a', /* slate-900 */
+                            card: '#1e293b', /* slate-800 */
+                            border: '#334155', /* slate-700 */
+                            accent: '#3b82f6', /* blue-500 */
+                            soft: '#93c5fd'  /* blue-300 */
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'float-delayed': 'float 6s ease-in-out 2s infinite',
+                        'float-fast': 'float 4s ease-in-out 1s infinite',
+                        'fade-in-left': 'fadeInLeft 0.8s ease-out forwards',
+                        'fade-in-right': 'fadeInRight 0.8s ease-out forwards',
+                        'pulse-slow': 'pulse 8s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-15px)' },
+                        },
+                        fadeInLeft: {
+                            '0%': { opacity: '0', transform: 'translateX(-30px)' },
+                            '100%': { opacity: '1', transform: 'translateX(0)' },
+                        },
+                        fadeInRight: {
+                            '0%': { opacity: '0', transform: 'translateX(30px)' },
+                            '100%': { opacity: '1', transform: 'translateX(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+                .glass-panel {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tab-active {
+            color: #f8fafc;
+            border-bottom: 2px solid #3b82f6;
+        }
+        
+        .tab-inactive {
+            color: #94a3b8;
+            border-bottom: 2px solid transparent;
+        }
+
+        #signup-form {
+            display: none;
+        }
+        
+        input::placeholder {
+            color: #64748b;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans relative overflow-hidden flex items-center justify-center">
+    
+    <!-- Decorative background elements with animation -->
+    <div class="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] bg-blue-500/20 rounded-full blur-[150px] pointer-events-none animate-pulse-slow"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-500/20 rounded-full blur-[150px] pointer-events-none animate-pulse-slow" style="animation-delay: 4s;"></div>
+
+    <div class="max-w-6xl w-full mx-auto p-6 lg:p-12 relative z-10 flex flex-col items-center justify-center min-h-[80vh]">
+        
+        <!-- Center Auth Forms -->
+        <div class="w-full max-w-md p-8 glass-panel rounded-2xl z-10 animate-fade-in-right relative border border-slate-700/50">
+            <!-- Logo Header -->
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/30">
+                    <i class="ph ph-heartbeat text-2xl text-white"></i>
+                </div>
+                <h2 class="text-2xl font-bold tracking-tight text-white">Get Started</h2>
+            </div>
+
+            <!-- Auth Tabs -->
+            <div class="flex mb-6 border-b border-slate-700">
+                <button id="tab-login" onclick="switchTab('login')" class="flex-1 py-3 text-sm font-medium transition-all tab-active hover:text-white">
+                    Log In
+                </button>
+                <button id="tab-signup" onclick="switchTab('signup')" class="flex-1 py-3 text-sm font-medium transition-all tab-inactive hover:text-white">
+                    Sign Up
+                </button>
+            </div>
+
+            <!-- Alert Box -->
+            <div id="alert-box" class="hidden mb-4 p-3 rounded-lg text-sm font-medium text-center transition-all"></div>
+
+            <!-- Login Form (Previous User) -->
+            <form id="login-form" onsubmit="handleAuth(event, 'login')">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Username</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="ph ph-user text-slate-500"></i>
+                            </div>
+                            <input type="text" id="login-username" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-colors" placeholder="Enter your username">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Password</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="ph ph-lock-key text-slate-500"></i>
+                            </div>
+                            <input type="password" id="login-password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-colors" placeholder="Enter your password">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium py-2.5 rounded-lg shadow-md shadow-blue-500/20 transition-all transform hover:-translate-y-1 hover:scale-105 active:scale-95 transition-all duration-300 mt-6">
+                        Access Dashboard
+                    </button>
+                </div>
+            </form>
+
+            <!-- Signup Form (New User) -->
+            <form id="signup-form" onsubmit="handleAuth(event, 'signup')">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Choose a Username</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="ph ph-user-plus text-slate-500"></i>
+                            </div>
+                            <input type="text" id="signup-username" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-colors" placeholder="Create a username">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Create a Password</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="ph ph-lock-key text-slate-500"></i>
+                            </div>
+                            <input type="password" id="signup-password" required class="w-full bg-slate-800/50 border border-slate-700 rounded-lg pl-10 pr-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 transition-colors" placeholder="Create a secure password">
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium py-2.5 rounded-lg shadow-md shadow-blue-500/20 transition-all transform hover:-translate-y-1 hover:scale-105 active:scale-95 transition-all duration-300 mt-6">
+                        Create Anonymous Account
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            const tabLogin = document.getElementById('tab-login');
+            const tabSignup = document.getElementById('tab-signup');
+            const alertBox = document.getElementById('alert-box');
+
+            alertBox.classList.add('hidden'); // Clear errors on tab switch
+
+            if (tab === 'login') {
+                loginForm.style.display = 'block';
+                signupForm.style.display = 'none';
+                tabLogin.classList.replace('tab-inactive', 'tab-active');
+                tabSignup.classList.replace('tab-active', 'tab-inactive');
+            } else {
+                loginForm.style.display = 'none';
+                signupForm.style.display = 'block';
+                tabSignup.classList.replace('tab-inactive', 'tab-active');
+                tabLogin.classList.replace('tab-active', 'tab-inactive');
+            }
+        }
+
+        async function handleAuth(event, type) {
+            event.preventDefault();
+            const username = document.getElementById(`${type}-username`).value;
+            const password = document.getElementById(`${type}-password`).value;
+            const alertBox = document.getElementById('alert-box');
+            
+            try {
+                const response = await fetch(`/${type}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    alertBox.className = 'mb-4 p-3 rounded-lg text-sm font-medium text-center bg-blue-500/20 text-blue-300 border border-blue-500/30';
+                    alertBox.textContent = 'Success! Redirecting...';
+                    alertBox.classList.remove('hidden');
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 800);
+                } else {
+                    alertBox.className = 'mb-4 p-3 rounded-lg text-sm font-medium text-center bg-red-500/20 text-red-400 border border-red-500/30';
+                    alertBox.textContent = result.message || 'An error occurred';
+                    alertBox.classList.remove('hidden');
+                }
+            } catch (error) {
+                alertBox.className = 'mb-4 p-3 rounded-lg text-sm font-medium text-center bg-red-500/20 text-red-400 border border-red-500/30';
+                alertBox.textContent = 'Network error. Please try again.';
+                alertBox.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

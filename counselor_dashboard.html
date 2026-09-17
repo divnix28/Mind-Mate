@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MindMate | Counselor Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                fontFamily: { sans: ['Outfit', 'sans-serif'] },
+                extend: {
+                    animation: {
+                        'gradient': 'gradient 15s ease infinite',
+                        'glass-pulse': 'glassPulse 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        gradient: {
+                            '0%, 100%': { 'background-position': '0% 50%' },
+                            '50%': { 'background-position': '100% 50%' },
+                        },
+                        glassPulse: {
+                            '0%, 100%': { 'box-shadow': '0 0 15px rgba(59, 130, 246, 0.1)', 'border-color': 'rgba(59, 130, 246, 0.2)' },
+                            '50%': { 'box-shadow': '0 0 25px rgba(59, 130, 246, 0.3)', 'border-color': 'rgba(59, 130, 246, 0.4)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+                .glass-panel {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+        .animated-bg {
+            background: linear-gradient(-45deg, #020617, #0f172a, #1e3a8a, #0f172a);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+    </style>
+</head>
+<body class="animated-bg text-slate-100 min-h-screen flex flex-col font-sans">
+    
+    <!-- Top Navigation Bar -->
+    <header class="glass-panel sticky top-0 z-40 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-600/80 flex items-center justify-center shadow-[0_0_15px_rgba(37,99,235,0.5)]">
+                <i class="ph ph-shield-check text-2xl text-white"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight tracking-tight text-white drop-shadow-md">
+                    Counselor Portal
+                </h1>
+                <p class="text-xs text-blue-400 uppercase tracking-widest font-semibold">Clinician Dashboard</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+            <span class="text-sm font-medium text-blue-200/70">Logged in as: <span class="text-white">{{ username }}</span></span>
+            <a href="/logout" class="flex items-center gap-1.5 px-4 py-2 rounded-lg glass-panel hover:bg-blue-900/50 text-slate-300 text-sm font-semibold transition-all">
+                <i class="ph ph-sign-out text-base"></i>
+                Sign Out
+            </a>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-6xl w-full mx-auto p-6 mt-4 flex flex-col h-[calc(100vh-100px)]">
+        
+        <!-- Navigation Tabs -->
+        <div class="flex items-center space-x-2 mb-6 shrink-0">
+            <button onclick="switchTab('triage')" id="tab-triage" class="px-4 py-2 rounded-lg text-sm font-bold transition-all bg-blue-600 text-white shadow-md">
+                Triage Queue
+            </button>
+            <button onclick="switchTab('chats')" id="tab-chats" class="px-4 py-2 rounded-lg text-sm font-bold transition-all text-slate-400 bg-slate-800/40 hover:bg-slate-700/50 border border-slate-700/50">
+                Live Chats
+            </button>
+        </div>
+
+        <!-- COUNSELOR DASHBOARD PORTAL (TRIAGE) -->
+        <section id="screen-triage" class="space-y-6 flex-1 overflow-y-auto pr-2 pb-10">
+            <div class="glass-panel animate-glass-pulse rounded-2xl p-6 flex items-center justify-between mb-6">
+                <div class="flex items-center gap-4">
+                    <div class="p-3 bg-blue-500/20 text-blue-300 rounded-xl">
+                        <i class="ph ph-shield-warning text-3xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-blue-200">Campus Clinician Triage Portal</h2>
+                        <p class="text-sm text-slate-300/80">Moderate-risk logs queued for human review. Identities remain hashed until outreach is approved.</p>
+                    </div>
+                </div>
+                <span class="text-sm bg-blue-500/20 text-blue-300 font-mono px-4 py-2 rounded-lg border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.2)]">
+                    Pending: <span id="queueCount">0</span>
+                </span>
+            </div>
+
+            <!-- Stats Panel -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="glass-panel p-4 rounded-xl flex items-center justify-between border-l-4 border-emerald-500">
+                    <div>
+                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Queries Solved</p>
+                        <h3 class="text-2xl font-bold text-slate-100" id="stat-solved">0</h3>
+                    </div>
+                    <div class="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg">
+                        <i class="ph ph-check-circle text-2xl"></i>
+                    </div>
+                </div>
+                
+                <div class="glass-panel p-4 rounded-xl flex items-center justify-between border-l-4 border-slate-500">
+                    <div>
+                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Queries Declined</p>
+                        <h3 class="text-2xl font-bold text-slate-100" id="stat-declined">0</h3>
+                    </div>
+                    <div class="p-2 bg-slate-500/20 text-slate-400 rounded-lg">
+                        <i class="ph ph-x-circle text-2xl"></i>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-4 rounded-xl flex items-center justify-between border-l-4 border-rose-500">
+                    <div>
+                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Emergencies Dispatched</p>
+                        <h3 class="text-2xl font-bold text-slate-100" id="stat-dispatched">0</h3>
+                    </div>
+                    <div class="p-2 bg-rose-500/20 text-rose-400 rounded-lg">
+                        <i class="ph ph-ambulance text-2xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Counselor Review Queue -->
+            <div id="counselorQueue" class="space-y-4">
+                <!-- Dynamically populated by JS -->
+            </div>
+            </div>
+            </div>
+        </section>
+
+        <!-- LIVE CHATS PORTAL -->
+        <section id="screen-chats" class="hidden flex-1 flex gap-4 h-full pb-10">
+            <!-- Sidebar: Active Chats -->
+            <div class="w-1/3 glass-panel border border-slate-700/50 shadow-sm rounded-2xl flex flex-col overflow-hidden">
+                <div class="p-4 border-b border-slate-700/50 bg-slate-800/40">
+                    <h3 class="font-bold text-slate-100">Active Students</h3>
+                </div>
+                <div id="activeChatList" class="flex-1 overflow-y-auto p-2 space-y-2">
+                    <div class="text-center text-xs text-slate-500 mt-4">Loading chats...</div>
+                </div>
+            </div>
+
+            <!-- Chat Window -->
+            <div class="w-2/3 glass-panel border border-slate-700/50 shadow-sm rounded-2xl flex flex-col overflow-hidden relative">
+                <div id="chatHeader" class="p-4 border-b border-slate-700/50 bg-slate-800/40 flex items-center justify-between">
+                    <h3 class="font-bold text-slate-100 text-sm">Select a student to chat</h3>
+                </div>
+                <div id="counselorChatHistory" class="flex-1 p-4 overflow-y-auto space-y-3 flex flex-col">
+                    <div class="text-center text-xs text-slate-500 my-4">No student selected.</div>
+                </div>
+                <div class="p-3 bg-slate-900/60 border-t border-slate-700/50 flex items-center gap-2">
+                    <input type="text" id="counselorChatInput" placeholder="Type a message..." disabled
+                           class="flex-1 bg-slate-800/80 border border-slate-600/50 rounded-lg px-3 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-blue-500 disabled:opacity-50" 
+                           onkeypress="if(event.key === 'Enter') sendCounselorMessage()" />
+                    <button id="counselorChatBtn" onclick="sendCounselorMessage()" disabled
+                            class="bg-blue-600 hover:bg-blue-500 text-white p-2.5 rounded-lg transition-all opacity-50 cursor-not-allowed">
+                        <i class="ph ph-paper-plane-right text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Dashboard Logic -->
+    <script>
+        // 1. POLLING LOGIC
+        async function fetchQueue() {
+            try {
+                const res = await fetch('/api/counselor/queue');
+                const data = await res.json();
+                
+                if(data.success) {
+                    const queue = data.queue;
+                    document.getElementById('queueCount').innerText = queue.length;
+                    
+                    const container = document.getElementById('counselorQueue');
+                    container.innerHTML = '';
+                    
+                    if(queue.length === 0) {
+                        container.innerHTML = `
+                        <div class="text-center py-10 text-slate-500">
+                            <i class="ph ph-check-circle text-4xl mb-2 text-emerald-500/50"></i>
+                            <p>All clear! No pending triage logs.</p>
+                        </div>`;
+                        return;
+                    }
+                    
+                    queue.forEach(item => {
+                        const cardId = `log-${item.id}`;
+                        const showIdentity = item.risk_level === 'high' || item.risk_level === 'moderate' || item.is_unmasked;
+                        const hashText = showIdentity ? `IDENTITY: ${item.username}` : `Hash: #STU-${item.user_id}X${item.id}`;
+                        
+                        const div = document.createElement('div');
+                        div.className = "glass-panel hover:bg-slate-800/60 hover:scale-[1.02] active:scale-[0.99] transition-all duration-300 rounded-xl p-5 space-y-4 hover:shadow-[0_8px_32px_0_rgba(59,130,246,0.15)] hover:border-blue-500/40";
+                        div.id = cardId;
+                        
+                        div.innerHTML = `
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xs font-mono bg-slate-900/80 ${showIdentity ? 'text-rose-400' : 'text-slate-300'} px-3 py-1 rounded border border-slate-700/50">${hashText}</span>
+                                    <span class="text-xs bg-blue-500/20 text-blue-300 px-3 py-1 rounded border border-blue-500/30 font-semibold shadow-[0_0_8px_rgba(59,130,246,0.2)]">Risk: ${item.risk_level.toUpperCase()}</span>
+                                </div>
+                                <span class="text-xs text-slate-400">${item.timestamp}</span>
+                            </div>
+                            <p class="text-sm text-slate-200 leading-relaxed bg-slate-900/40 p-4 rounded-lg border border-slate-700/50 italic backdrop-blur-sm">
+                                "${item.snippet}"
+                            </p>
+                            <div class="flex flex-col sm:flex-row justify-between items-center pt-4 border-t border-slate-700/50 gap-4 mt-2">
+                                <!-- Emergency Dispatch Group -->
+                                <div class="flex space-x-2 w-full sm:w-auto">
+                                    <button onclick="handleAction(${item.id}, 'dispatched_police', '${item.username}')" class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-600 text-rose-300 hover:text-white transition-all text-xs font-semibold border border-rose-900/50 hover:shadow-[0_0_15px_rgba(225,29,72,0.5)]">
+                                        🚓 Police
+                                    </button>
+                                    <button onclick="handleAction(${item.id}, 'dispatched_medics', '${item.username}')" class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-500 text-rose-300 hover:text-white transition-all text-xs font-semibold border border-rose-900/50 hover:shadow-[0_0_15px_rgba(244,63,94,0.5)]">
+                                        🚑 Medics
+                                    </button>
+                                    <button onclick="handleAction(${item.id}, 'dispatched_security', '${item.username}')" class="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950/40 hover:bg-amber-600 text-amber-300 hover:text-white transition-all text-xs font-semibold border border-amber-900/50 hover:shadow-[0_0_15px_rgba(217,119,6,0.5)]">
+                                        🛡️ Security
+                                    </button>
+                                </div>
+                                
+                                <!-- Normal Actions Group -->
+                                <div class="flex space-x-3 w-full sm:w-auto">
+                                    <button onclick="handleAction(${item.id}, 'ignored', '${item.username}')" class="flex-1 sm:flex-none px-4 py-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 transition-all text-xs font-semibold border border-slate-700/50">
+                                        Ignore / False Flag
+                                    </button>
+                                    <button onclick="handleAction(${item.id}, 'approved', '${item.username}')" class="flex-1 sm:flex-none px-4 py-2 rounded-lg bg-blue-600/90 hover:bg-blue-500 text-white font-medium hover:shadow-[0_0_20px_rgba(59,130,246,0.6)] transform hover:-translate-y-1 hover:scale-105 active:scale-95 transition-all duration-300 shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)] text-xs border border-blue-400/30">
+                                        Approve Outreach
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        container.appendChild(div);
+                    });
+                }
+            } catch(e) {
+                console.error("Queue fetch error:", e);
+            }
+        }
+
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/counselor/stats');
+                const data = await res.json();
+                if(data.success) {
+                    document.getElementById('stat-solved').innerText = data.solved;
+                    document.getElementById('stat-declined').innerText = data.declined;
+                    document.getElementById('stat-dispatched').innerText = data.dispatched;
+                }
+            } catch(e) {
+                console.error("Stats fetch error:", e);
+            }
+        }
+
+        async function handleAction(logId, action, username) {
+            try {
+                const res = await fetch('/api/counselor/action', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id: logId, action: action})
+                });
+                const data = await res.json();
+                if(data.success) {
+                    if (action === 'approved') {
+                        const email = `${username}@student.campus.edu`;
+                        const subject = encodeURIComponent("Check-in from Campus Counseling");
+                        const body = encodeURIComponent(`Hi ${username},\n\nWe received a flagged alert from your MindMate dashboard and want to make sure you're doing okay.\n\nPlease drop by the wellness center today, or reply to this email to schedule a quick chat.\n\nTake care,\nCampus Clinician Team`);
+                        
+                        // Open Gmail compose window in a new tab
+                        const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${subject}&body=${body}`;
+                        window.open(gmailUrl, '_blank');
+                    } else if (action.startsWith('dispatched_')) {
+                        const service = action.split('_')[1].toUpperCase();
+                        alert(`🚨 HIGH PRIORITY ALERT: ${service} has been notified and dispatched to student's registered location.`);
+                    }
+                    fetchQueue(); // refresh UI immediately
+                    fetchStats(); // refresh stats
+                }
+            } catch(e) {
+                console.error("Action error:", e);
+            }
+        }
+
+        // Run immediately and poll every 5 seconds
+        fetchQueue();
+        fetchStats();
+        setInterval(() => {
+            fetchQueue();
+            fetchStats();
+        }, 5000);
+
+        function updateQueueCount(diff) {
+            const badge = document.getElementById('queueCount');
+            let current = parseInt(badge.innerText) || 0;
+            current = Math.max(0, current + diff);
+            badge.innerText = current;
+        }
+
+        // 2. LIVE CHAT LOGIC
+        let currentUserId = null;
+        let activeChatsPoll = null;
+        let messagesPoll = null;
+
+        function switchTab(tab) {
+            document.getElementById('screen-triage').classList.add('hidden');
+            document.getElementById('screen-chats').classList.add('hidden');
+            
+            document.getElementById('tab-triage').className = "px-4 py-2 rounded-lg text-sm font-bold transition-all text-slate-400 bg-slate-800/40 hover:bg-slate-700/50 border border-slate-700/50";
+            document.getElementById('tab-chats').className = "px-4 py-2 rounded-lg text-sm font-bold transition-all text-slate-400 bg-slate-800/40 hover:bg-slate-700/50 border border-slate-700/50";
+
+            if (tab === 'triage') {
+                document.getElementById('screen-triage').classList.remove('hidden');
+                document.getElementById('tab-triage').className = "px-4 py-2 rounded-lg text-sm font-bold transition-all bg-blue-600 text-white shadow-md border border-blue-500/50";
+                
+                if(activeChatsPoll) clearInterval(activeChatsPoll);
+                if(messagesPoll) clearInterval(messagesPoll);
+            } else {
+                document.getElementById('screen-chats').classList.remove('hidden');
+                document.getElementById('tab-chats').className = "px-4 py-2 rounded-lg text-sm font-bold transition-all bg-blue-600 text-white shadow-md border border-blue-500/50";
+                
+                fetchActiveChats();
+                activeChatsPoll = setInterval(fetchActiveChats, 5000);
+                
+                if (currentUserId) {
+                    fetchCounselorMessages();
+                    messagesPoll = setInterval(fetchCounselorMessages, 3000);
+                }
+            }
+        }
+
+        async function fetchActiveChats() {
+            try {
+                const res = await fetch('/api/counselor/active_chats');
+                const data = await res.json();
+                if(data.success) {
+                    const list = document.getElementById('activeChatList');
+                    list.innerHTML = '';
+                    if (data.active_chats.length === 0) {
+                        list.innerHTML = `<div class="text-center text-xs text-slate-500 mt-4">No active chats.</div>`;
+                    } else {
+                        data.active_chats.forEach(chat => {
+                            const btn = document.createElement('button');
+                            const isActive = currentUserId === chat.user_id;
+                            btn.className = `w-full text-left px-4 py-3 rounded-xl transition-all border ${isActive ? 'bg-blue-600/20 border-blue-500/50 shadow-sm' : 'bg-slate-800/40 border-transparent hover:bg-slate-700/50'}`;
+                            btn.innerHTML = `<div class="font-bold text-sm text-slate-200">${chat.username}</div><div class="text-xs text-slate-400">ID: ${chat.user_id}</div>`;
+                            btn.onclick = () => selectUser(chat.user_id, chat.username);
+                            list.appendChild(btn);
+                        });
+                    }
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function selectUser(userId, username) {
+            currentUserId = userId;
+            
+            document.getElementById('chatHeader').innerHTML = `
+                <h3 class="font-bold text-slate-100 text-sm">Chat with ${username}</h3>
+                <span class="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded border border-blue-500/30 shadow-[0_0_8px_rgba(59,130,246,0.2)]">ID: ${userId}</span>
+            `;
+            
+            document.getElementById('counselorChatInput').disabled = false;
+            document.getElementById('counselorChatBtn').disabled = false;
+            document.getElementById('counselorChatBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+            
+            if(messagesPoll) clearInterval(messagesPoll);
+            fetchCounselorMessages();
+            messagesPoll = setInterval(fetchCounselorMessages, 3000);
+            
+            fetchActiveChats(); // refresh sidebar to highlight selected
+        }
+
+        async function fetchCounselorMessages() {
+            if(!currentUserId) return;
+            try {
+                const res = await fetch(`/api/chat/messages?user_id=${currentUserId}`);
+                const data = await res.json();
+                if (data.success) {
+                    const container = document.getElementById('counselorChatHistory');
+                    const wasAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 20;
+                    
+                    container.innerHTML = '';
+                    if (data.messages.length === 0) {
+                        container.innerHTML = `<div class="text-center text-xs text-slate-500 my-4">No messages yet.</div>`;
+                    } else {
+                        data.messages.forEach(msg => {
+                            const isCounselor = msg.sender_type === 'counselor';
+                            const alignment = isCounselor ? 'self-end' : 'self-start';
+                            const bgColor = isCounselor ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-700/80 text-slate-100 border border-slate-600/50 shadow-sm';
+                            const borderRadius = isCounselor ? 'rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl rounded-br-sm' : 'rounded-tl-2xl rounded-tr-2xl rounded-bl-sm rounded-br-2xl';
+                            const senderName = isCounselor ? 'You' : 'Student';
+                            
+                            const div = document.createElement('div');
+                            div.className = `max-w-[80%] ${alignment} flex flex-col`;
+                            div.innerHTML = `
+                                <span class="text-[10px] text-slate-400 mb-0.5 mx-1 ${isCounselor ? 'text-right' : 'text-left'}">${senderName} • ${msg.timestamp.split(' ')[1]}</span>
+                                <div class="${bgColor} ${borderRadius} px-4 py-2.5 text-sm whitespace-pre-wrap">${msg.message}</div>
+                            `;
+                            container.appendChild(div);
+                        });
+                    }
+                    
+                    if (wasAtBottom) {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function sendCounselorMessage() {
+            const input = document.getElementById('counselorChatInput');
+            const message = input.value.trim();
+            if (!message || !currentUserId) return;
+            
+            input.value = '';
+            try {
+                const res = await fetch('/api/chat/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message, user_id: currentUserId })
+                });
+                if (res.ok) fetchCounselorMessages();
+            } catch(e) { console.error(e); }
+        }
+    </script>
+</body>
+</html>

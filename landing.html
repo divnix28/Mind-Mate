@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MindMate | Early-Warning Mental Health Triage</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                fontFamily: {
+                    sans: ['Outfit', 'sans-serif'],
+                },
+                extend: {
+                    colors: {
+                        cozy: {
+                            bg: '#0f172a',
+                            card: '#1e293b',
+                            border: '#334155',
+                            accent: '#3b82f6',
+                            soft: '#93c5fd'
+                        }
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'float-delayed': 'float 6s ease-in-out 2s infinite',
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                        'gradient': 'gradient 15s ease infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-15px)' },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(30px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        gradient: {
+                            '0%, 100%': { 'background-position': '0% 50%' },
+                            '50%': { 'background-position': '100% 50%' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+        
+        .animated-bg {
+            background: linear-gradient(-45deg, #020617, #0f172a, #1e3a8a, #0f172a);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+
+<body class="animated-bg text-slate-100 min-h-screen font-sans relative overflow-x-hidden flex items-center justify-center selection:bg-blue-500 selection:text-white">
+    
+    <div class="max-w-6xl w-full mx-auto p-6 lg:p-12 relative z-10 flex flex-col items-center justify-center min-h-[80vh] text-center space-y-12">
+        
+        <!-- Hero Section -->
+        <div class="space-y-6 max-w-3xl animate-fade-in-up">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-panel text-blue-300 text-sm font-semibold mb-2">
+                <i class="ph ph-shield-check text-lg"></i> Secure. Anonymous. Intelligent.
+            </div>
+            
+            <h1 class="text-5xl lg:text-7xl font-bold tracking-tight leading-tight drop-shadow-lg">
+                Your Digital <br />
+                <span class="gradient-text">Mental Health</span> Triage
+            </h1>
+            
+            <p class="text-slate-300 text-lg lg:text-xl leading-relaxed font-light">
+                MindMate is a safe, completely anonymous space to vent your daily stress, track your emotional growth without guilt, and automatically connect with human counselors when you need it most.
+            </p>
+        </div>
+
+        <!-- Features Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl animate-fade-in-up" style="animation-delay: 0.2s; opacity: 0;">
+            <div class="glass-panel p-6 rounded-2xl flex flex-col items-center text-center space-y-4 hover:scale-105 transition-transform duration-300">
+                <div class="w-14 h-14 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                    <i class="ph ph-mask-happy text-3xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg text-slate-100 mb-1">Anonymous Venting</h3>
+                    <p class="text-sm text-slate-400 leading-relaxed">Let it all out in a private channel. No judgment, no filters.</p>
+                </div>
+            </div>
+            
+            <div class="glass-panel p-6 rounded-2xl flex flex-col items-center text-center space-y-4 hover:scale-105 transition-transform duration-300">
+                <div class="w-14 h-14 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 shadow-[0_0_15px_rgba(99,102,241,0.3)]">
+                    <i class="ph ph-chart-line-up text-3xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg text-slate-100 mb-1">Guilt-Free Tracking</h3>
+                    <p class="text-sm text-slate-400 leading-relaxed">Track your mood over time with forgiving streaks that never reset to zero.</p>
+                </div>
+            </div>
+
+            <div class="glass-panel p-6 rounded-2xl flex flex-col items-center text-center space-y-4 hover:scale-105 transition-transform duration-300">
+                <div class="w-14 h-14 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+                    <i class="ph ph-stethoscope text-3xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg text-slate-100 mb-1">AI Triage Routing</h3>
+                    <p class="text-sm text-slate-400 leading-relaxed">Our AI detects high-risk vents and seamlessly connects you to campus clinicians.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="animate-fade-in-up pt-8" style="animation-delay: 0.4s; opacity: 0;">
+            <a href="/auth" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg px-8 py-4 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] transform hover:-translate-y-1 active:scale-95 transition-all duration-300 border border-blue-400/30">
+                Get Started Now <i class="ph ph-arrow-right font-bold"></i>
+            </a>
+            <div class="mt-4">
+                <a href="/counselor" class="text-sm text-slate-400 hover:text-blue-300 transition-colors">Counselor / Staff Portal</a>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>
