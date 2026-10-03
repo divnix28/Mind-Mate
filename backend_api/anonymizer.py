@@ -1,11 +1,23 @@
 import re
 from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern
+from presidio_analyzer.nlp_engine import NlpEngineProvider
 from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig
 
 class PIIAnonymizer:
     def __init__(self):
-        self.analyzer = AnalyzerEngine(supported_languages=["en"])
+        # Explicitly configure Presidio to use the lightweight small model
+        configuration = {
+            "nlp_engine_name": "spacy",
+            "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}],
+        }
+        provider = NlpEngineProvider(nlp_configuration=configuration)
+        nlp_engine = provider.create_engine()
+
+        self.analyzer = AnalyzerEngine(
+            nlp_engine=nlp_engine,
+            supported_languages=["en"]
+        )
         self.anonymizer = AnonymizerEngine()
         self._add_custom_recognizers()
 
