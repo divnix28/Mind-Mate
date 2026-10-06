@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind-Mate Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --chat-bg: #1e293b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --bot-msg-bg: #334155;
+            --user-msg-bg: #2563eb;
+            --counselor-msg-bg: #10b981;
+            --system-msg-bg: rgba(245, 158, 11, 0.1);
+            --system-msg-border: #f59e0b;
+            --danger: #ef4444;
+            --input-bg: #0f172a;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 95vh;
+            background-color: var(--chat-bg);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chat-header {
+            padding: 20px 24px;
+            background: linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(16,185,129,0.1) 100%);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, #8b5cf6 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 20px;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .counselor-avatar {
+            background: linear-gradient(135deg, var(--counselor-msg-bg) 0%, #059669 100%);
+        }
+
+        .header-info h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            transition: color 0.3s ease;
+        }
+
+        .header-info p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
+
+        .chat-messages::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 10px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease-out forwards;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .msg-user {
+            align-self: flex-end;
+            background-color: var(--user-msg-bg);
+            border-bottom-right-radius: 2px;
+            color: white;
+        }
+
+        .msg-bot {
+            align-self: flex-start;
+            background-color: var(--bot-msg-bg);
+            border-bottom-left-radius: 2px;
+        }
+
+        .msg-counselor {
+            align-self: flex-start;
+            background-color: var(--counselor-msg-bg);
+            color: white;
+            border-bottom-left-radius: 2px;
+            box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39);
+        }
+
+        .msg-system {
+            align-self: center;
+            background-color: var(--system-msg-bg);
+            border: 1px solid var(--system-msg-border);
+            color: var(--system-msg-border);
+            font-size: 0.85rem;
+            text-align: center;
+            max-width: 90%;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: 500;
+        }
+
+        .chat-input-container {
+            padding: 20px 24px;
+            background-color: var(--chat-bg);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 12px;
+            background-color: var(--input-bg);
+            padding: 8px 8px 8px 20px;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            transition: border-color 0.2s;
+        }
+
+        .chat-input-wrapper:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .chat-input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 1rem;
+            font-family: inherit;
+            outline: none;
+            padding: 8px 0;
+        }
+
+        .chat-input:disabled {
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .send-btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+            transform: scale(1.05);
+        }
+        
+        .send-btn:disabled {
+            background-color: var(--border-color);
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        .send-icon {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .connecting-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+
+        .connecting-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top: 3px solid var(--primary);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <!-- Connecting Overlay -->
+        <div class="connecting-overlay" id="connectingOverlay">
+            <div class="loader"></div>
+            <p>Connecting to secure session...</p>
+        </div>
+
+        <div class="chat-header">
+            <div class="avatar" id="headerAvatar">AI</div>
+            <div class="header-info">
+                <h2 id="headerTitle">Mind-Mate Assistant</h2>
+                <p id="headerStatus">Online</p>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <!-- Messages will appear here -->
+        </div>
+
+        <div class="chat-input-container">
+            <form class="chat-input-wrapper" id="chatForm">
+                <input type="text" class="chat-input" id="messageInput" placeholder="Type your message here..." autocomplete="off" />
+                <button type="submit" class="send-btn" id="sendBtn">
+                    <svg class="send-icon" viewBox="0 0 24 24">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById('chatMessages');
+        const chatForm = document.getElementById('chatForm');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const connectingOverlay = document.getElementById('connectingOverlay');
+        const headerAvatar = document.getElementById('headerAvatar');
+        const headerTitle = document.getElementById('headerTitle');
+        const headerStatus = document.getElementById('headerStatus');
+
+        // Extract session ID from URL params (e.g. ?sessionId=xyz)
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('sessionId');
+
+        if (!sessionId) {
+            alert('No valid session found. Please start a session from the home page.');
+            // Ideally redirect here
+        }
+
+        // Setup WebSocket
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        // Using window.location.host for dynamic origin detection
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/student/${sessionId}`;
+        
+        let ws;
+
+        function connectWebSocket() {
+            if (!sessionId) return;
+            
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                connectingOverlay.classList.add('hidden');
+                addMessage('SYSTEM', 'Secure session established.');
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    handleIncomingMessage(data);
+                } catch (e) {
+                    console.error('Failed to parse message', e);
+                }
+            };
+
+            ws.onclose = () => {
+                connectingOverlay.classList.remove('hidden');
+                connectingOverlay.querySelector('p').textContent = 'Connection lost. Reconnecting...';
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket Error:', error);
+            };
+        }
+
+        function handleIncomingMessage(data) {
+            const { sender, content } = data;
+
+            if (sender === 'SYSTEM') {
+                addMessage('SYSTEM', content);
+                
+                if (content.toLowerCase().includes('help is on the way')) {
+                    // Phase 4: SOS triggered, freeze input
+                    messageInput.disabled = true;
+                    sendBtn.disabled = true;
+                    messageInput.placeholder = 'Chat is frozen. Help is arriving.';
+                } else if (content.toLowerCase().includes('human counselor')) {
+                    // Update header to show transition
+                    headerAvatar.textContent = 'H';
+                    headerAvatar.classList.add('counselor-avatar');
+                    headerTitle.textContent = 'Human Counselor';
+                    headerTitle.style.color = 'var(--counselor-msg-bg)';
+                }
+            } else if (sender === 'COUNSELOR') {
+                // Ensure UI is updated if we missed the system message
+                if (!headerAvatar.classList.contains('counselor-avatar')) {
+                    headerAvatar.textContent = 'H';
+                    headerAvatar.classList.add('counselor-avatar');
+                    headerTitle.textContent = 'Human Counselor';
+                    headerTitle.style.color = 'var(--counselor-msg-bg)';
+                }
+                addMessage('COUNSELOR', content);
+            } else if (sender === 'BOT') {
+                addMessage('BOT', content);
+            }
+        }
+
+        function addMessage(sender, text) {
+            const msgDiv = document.createElement('div');
+            msgDiv.classList.add('message');
+            
+            if (sender === 'USER') {
+                msgDiv.classList.add('msg-user');
+            } else if (sender === 'BOT') {
+                msgDiv.classList.add('msg-bot');
+            } else if (sender === 'COUNSELOR') {
+                msgDiv.classList.add('msg-counselor');
+            } else if (sender === 'SYSTEM') {
+                msgDiv.classList.add('msg-system');
+            }
+
+            msgDiv.textContent = text;
+            chatMessages.appendChild(msgDiv);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = messageInput.value.trim();
+            if (!text || messageInput.disabled) return;
+
+            // Send to WS
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ content: text }));
+                addMessage('USER', text);
+                messageInput.value = '';
+            } else {
+                alert('Connection is offline. Please wait.');
+            }
+        });
+
+        // Initialize connection
+        connectWebSocket();
+    </script>
+</body>
+</html>
