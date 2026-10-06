@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind-Mate | Digital Mental Health Screening</title>
+    <meta name="description" content="Mind-Mate is a real-time, 3-Tier WebSocket Chat Application designed to analyze anonymized student text entries and detect linguistic patterns associated with psychological distress.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #ec4899;
+            --dark-bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #cbd5e1;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Animated Background Gradients */
+        .bg-glow {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            top: -200px;
+            left: -200px;
+            opacity: 0.15;
+            filter: blur(80px);
+            animation: float1 10s infinite alternate ease-in-out;
+            z-index: -1;
+        }
+
+        .bg-glow-2 {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, var(--secondary) 0%, transparent 70%);
+            bottom: -150px;
+            right: -100px;
+            opacity: 0.15;
+            filter: blur(80px);
+            animation: float2 12s infinite alternate ease-in-out;
+            z-index: -1;
+        }
+
+        @keyframes float1 {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(100px, 100px); }
+        }
+
+        @keyframes float2 {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(-100px, -50px); }
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            padding: 4rem 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Header Styles */
+        header {
+            text-align: center;
+            margin-bottom: 4rem;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 4rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #a5b4fc, #fbcfe8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 2rem auto;
+            line-height: 1.6;
+        }
+
+        .disclaimer-box {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            color: #fca5a5;
+            max-width: 700px;
+            margin: 0 auto;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+
+        .disclaimer-box i {
+            font-size: 1.2rem;
+            margin-top: 0.1rem;
+        }
+
+        /* Overview Section */
+        .overview {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 800px;
+            margin-bottom: 4rem;
+            animation: fadeInUp 1s ease-out 0.2s both;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+        }
+
+        .overview h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tiers-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .tiers-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1.2rem;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tiers-list li:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--glass-border);
+            transform: translateX(5px);
+        }
+
+        .tier-badge {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .tier-text {
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        
+        .tier-text strong {
+            color: var(--text-main);
+        }
+
+        /* Functions/Cards Grid */
+        .functions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            width: 100%;
+            max-width: 900px;
+            animation: fadeInUp 1s ease-out 0.4s both;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            text-decoration: none;
+            color: var(--text-main);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px -10px rgba(0,0,0,0.5);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.4s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.3);
+        }
+
+        .card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: rgba(99, 102, 241, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            transition: all 0.4s ease;
+        }
+
+        .card:hover .icon-wrapper {
+            background: var(--primary);
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
+        }
+
+        .icon-wrapper svg {
+            width: 40px;
+            height: 40px;
+            fill: var(--primary);
+            transition: fill 0.4s ease;
+        }
+
+        .card:hover .icon-wrapper svg {
+            fill: white;
+        }
+
+        .card-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .card-desc {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 2rem;
+            flex-grow: 1;
+        }
+
+        .card-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            padding: 0.8rem 2rem;
+            border-radius: 30px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .card:hover .card-btn {
+            background: white;
+            color: var(--dark-bg);
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 { font-size: 3rem; }
+            .container { padding: 2rem 1rem; }
+            .functions-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-glow"></div>
+    <div class="bg-glow-2"></div>
+
+    <div class="container">
+        
+        <header>
+            <h1>Mind-Mate</h1>
+            <p class="subtitle">Digital Mental Health Risk Screening System</p>
+            
+            <div class="disclaimer-box">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <div>
+                    <strong>Disclaimer:</strong> <i>Mind-Mate is a non-diagnostic triage and screening tool designed for higher education environments. It does not provide clinical medical diagnoses. Final referral decisions are made by human professionals using the Human-in-the-Loop (HITL) dashboard.</i>
+                </div>
+            </div>
+        </header>
+
+        <section class="overview">
+            <h2>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                System Overview
+            </h2>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem; line-height: 1.6;">
+                Mind-Mate is a real-time, 3-Tier WebSocket Chat Application designed to analyze anonymized student text entries and detect linguistic patterns associated with psychological distress.
+            </p>
+            <ul class="tiers-list">
+                <li>
+                    <span class="tier-badge">Tier 1</span>
+                    <p class="tier-text"><strong>AI Triage Agent:</strong> Student chats directly with an AI (Powered by Groq) for initial assessment and emotional support.</p>
+                </li>
+                <li>
+                    <span class="tier-badge">Tier 2</span>
+                    <p class="tier-text"><strong>Human-in-the-Loop:</strong> If the AI detects elevated risk, the chat is seamlessly handed off to a live human Counselor via a specialized dashboard.</p>
+                </li>
+                <li>
+                    <span class="tier-badge">Tier 3</span>
+                    <p class="tier-text"><strong>Red Alert:</strong> Automated red alert and SOS unmasking in cases of immediate severe risk to student safety.</p>
+                </li>
+            </ul>
+        </section>
+
+        <section class="functions-grid">
+            
+            <a href="#" onclick="startStudentChat(event)" class="card">
+                <div class="icon-wrapper">
+                    <!-- Chat Icon -->
+                    <svg viewBox="0 0 24 24">
+                        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/>
+                        <path d="M7 9h10v2H7zm0-3h10v2H7zm0 6h7v2H7z"/>
+                    </svg>
+                </div>
+                <h3 class="card-title">Student Chat Portal</h3>
+                <p class="card-desc">Access the student-facing interface. This is where students initiate chats, interact with the AI Triage Agent, and receive real-time support.</p>
+                <div class="card-btn">Open Student Portal</div>
+            </a>
+
+            <a href="./hitl_dashboard/counselor_dash.html" class="card">
+                <div class="icon-wrapper">
+                    <!-- Dashboard/Shield Icon -->
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                    </svg>
+                </div>
+                <h3 class="card-title">Counselor Dashboard</h3>
+                <p class="card-desc">Secure portal for mental health professionals to monitor active sessions, assume control of escalated chats, and manage risk alerts.</p>
+                <div class="card-btn">Open HITL Dashboard</div>
+            </a>
+
+            <a href="./chill_zone.html" class="card">
+                <div class="icon-wrapper">
+                    <!-- Heart/Chill Icon -->
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                </div>
+                <h3 class="card-title">Chill Zone</h3>
+                <p class="card-desc">Take a break and relax. Listen to calming beats, practice guided breathing, or set a meditation alarm.</p>
+                <div class="card-btn">Enter Chill Zone</div>
+            </a>
+
+        </section>
+
+    </div>
+
+    <script>
+        function startStudentChat(e) {
+            e.preventDefault();
+            // Generate a random 6-digit session ID for the student
+            const sessionId = Math.floor(100000 + Math.random() * 900000);
+            window.location.href = `./hitl_dashboard/student_chat.html?session_id=${sessionId}`;
+        }
+    </script>
+</body>
+</html>
