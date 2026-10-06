@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counselor Dashboard - Mind-Mate</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #ec4899;
+            --accent: #6366f1;
+            --accent-hover: #4f46e5;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --bg-color: #0f172a;
+            --panel-bg: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+            --text-dark: #f8fafc;
+            --text-light: #cbd5e1;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Animated Background Gradients */
+        .bg-glow {
+            position: fixed; width: 600px; height: 600px;
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            top: -200px; left: -200px; opacity: 0.15; filter: blur(80px);
+            animation: float1 10s infinite alternate ease-in-out; z-index: -1;
+        }
+
+        .bg-glow-2 {
+            position: fixed; width: 500px; height: 500px;
+            background: radial-gradient(circle, var(--secondary) 0%, transparent 70%);
+            bottom: -150px; right: -100px; opacity: 0.15; filter: blur(80px);
+            animation: float2 12s infinite alternate ease-in-out; z-index: -1;
+        }
+
+        @keyframes float1 { 0% { transform: translate(0, 0); } 100% { transform: translate(100px, 100px); } }
+        @keyframes float2 { 0% { transform: translate(0, 0); } 100% { transform: translate(-100px, -50px); } }
+
+        .sidebar {
+            width: 320px;
+            background-color: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            z-index: 10;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+        }
+
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: transparent;
+            z-index: 1;
+        }
+
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            background-color: rgba(255, 255, 255, 0.05);
+            color: white;
+        }
+
+        .sidebar-header h2 {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #a5b4fc;
+            letter-spacing: -0.025em;
+        }
+
+        .queue-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .queue-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-light);
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .badge {
+            background-color: var(--danger);
+            color: white;
+            padding: 0.125rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .session-card {
+            padding: 1rem;
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .session-card:hover {
+            border-color: var(--accent);
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .session-card.active {
+            border-color: var(--accent);
+            background-color: rgba(99, 102, 241, 0.15);
+        }
+
+        .session-id {
+            font-weight: 600;
+            color: var(--text-dark);
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .session-status {
+            font-size: 0.75rem;
+            color: #fca5a5;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .session-status::before {
+            content: '';
+            display: block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--danger);
+            animation: pulse 2s infinite;
+        }
+
+        .manual-join {
+            padding: 1rem;
+            border-top: 1px solid var(--border);
+            background-color: rgba(255,255,255,0.02);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .manual-join input {
+            flex: 1;
+            padding: 0.625rem;
+            background-color: rgba(255,255,255,0.05);
+            color: var(--text-dark);
+            border: 1px solid var(--border);
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        .manual-join input::placeholder {
+            color: rgba(255,255,255,0.3);
+        }
+
+        .manual-join input:focus {
+            border-color: var(--accent);
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .manual-join button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.625rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .manual-join button:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .chat-header {
+            padding: 1rem 1.5rem;
+            background-color: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 48px;
+        }
+
+        .active-session-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-dark);
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .sos-button {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 700;
+            font-size: 0.875rem;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .sos-button:hover {
+            background-color: var(--danger);
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 8px -1px rgba(239, 68, 68, 0.4);
+        }
+
+        .sos-button:active {
+            transform: translateY(0);
+        }
+        
+        .sos-button.hidden {
+            display: none;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            background-color: transparent;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 0.875rem 1.25rem;
+            border-radius: 1rem;
+            font-size: 0.9375rem;
+            line-height: 1.5;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        .message.student {
+            align-self: flex-start;
+            background-color: rgba(255,255,255,0.05);
+            color: var(--text-dark);
+            border-bottom-left-radius: 0.25rem;
+            border: 1px solid var(--border);
+        }
+
+        .message.counselor {
+            align-self: flex-end;
+            background-color: var(--accent);
+            color: white;
+            border-bottom-right-radius: 0.25rem;
+        }
+
+        .chat-input {
+            padding: 1.25rem 1.5rem;
+            background-color: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 1rem;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 0.875rem 1.25rem;
+            background-color: rgba(255,255,255,0.05);
+            color: var(--text-dark);
+            border: 1px solid var(--border);
+            border-radius: 9999px;
+            font-size: 0.9375rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .chat-input input::placeholder {
+            color: rgba(255,255,255,0.3);
+        }
+
+        .chat-input input:focus {
+            border-color: var(--accent);
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .chat-input button {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .chat-input button:hover {
+            background-color: var(--accent-hover);
+        }
+        
+        .chat-input button:disabled {
+            background-color: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.3);
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-light);
+            text-align: center;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: rgba(30, 41, 59, 0.95);
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: var(--text-dark);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            color: #fca5a5;
+        }
+
+        .modal-header svg {
+            width: 32px;
+            height: 32px;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .student-details {
+            background-color: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+
+        .detail-row {
+            display: flex;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .detail-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .detail-label {
+            width: 120px;
+            font-weight: 600;
+            color: #fca5a5;
+        }
+
+        .detail-value {
+            font-weight: 500;
+            color: white;
+        }
+
+        .modal-footer {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .btn-close {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid var(--border);
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .btn-close:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-glow"></div>
+    <div class="bg-glow-2"></div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>Mind-Mate</h2>
+            <div style="font-size: 0.875rem; opacity: 0.8; margin-top: 0.25rem;">Counselor Dashboard</div>
+        </div>
+        
+        <div class="queue-container">
+            <div class="queue-title">
+                Incoming Queue <span class="badge" id="queue-count">0</span>
+            </div>
+            
+            <div id="queue-list">
+                <!-- Populated dynamically via JS -->
+            </div>
+        </div>
+
+        <div class="manual-join">
+            <input type="text" id="manual-session-id" placeholder="Enter Session ID">
+            <button onclick="handleManualJoin()">Join</button>
+        </div>
+    </div>
+
+    <div class="main-chat">
+        <div class="chat-header">
+            <div class="active-session-title" id="active-session-title">Select a session to join</div>
+            <button class="sos-button hidden" id="sos-btn" onclick="triggerSOS()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    <line x1="12" y1="9" x2="12" y2="13"></line>
+                    <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
+                VERIFY EMERGENCY & DISPATCH
+            </button>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+            <div class="empty-state" id="empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                </svg>
+                <p>Join an incoming session to start chatting and assisting the student.</p>
+            </div>
+        </div>
+
+        <form class="chat-input" id="counselor-form">
+            <input type="text" id="counselor-input" placeholder="Type a message..." disabled autocomplete="off">
+            <button type="submit" id="counselor-send-btn" disabled>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                </svg>
+            </button>
+        </form>
+    </div>
+
+    <div class="modal-overlay" id="sos-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                </svg>
+                <h3 class="modal-title">Emergency Verified</h3>
+            </div>
+            
+            <p style="margin-bottom: 1.5rem; color: #cbd5e1;">Student identity unmasked. Please dispatch campus security immediately.</p>
+            
+            <div class="student-details">
+                <div class="detail-row">
+                    <div class="detail-label">Name:</div>
+                    <div class="detail-value" id="modal-name">Loading...</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Reg No:</div>
+                    <div class="detail-value" id="modal-reg-no">Loading...</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Location:</div>
+                    <div class="detail-value" id="modal-location">Loading...</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Phone:</div>
+                    <div class="detail-value" id="modal-phone">Loading...</div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-close" onclick="closeModal()">Acknowledge & Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSessionId = null;
+        let ws = null;
+        
+        const chatMessages = document.getElementById('chat-messages');
+        const emptyState = document.getElementById('empty-state');
+        const activeSessionTitle = document.getElementById('active-session-title');
+        const sosBtn = document.getElementById('sos-btn');
+        const counselorForm = document.getElementById('counselor-form');
+        const counselorInput = document.getElementById('counselor-input');
+        const counselorSendBtn = document.getElementById('counselor-send-btn');
+
+        async function fetchQueue() {
+            try {
+                const protocol = window.location.protocol;
+                const host = window.location.host;
+                let url = `${protocol}//${host}/api/v1/hitl/queue`;
+                if (currentSessionId) {
+                    url += `?active_session=${currentSessionId}`;
+                }
+                const response = await fetch(url);
+                if (response.ok) {
+                    const queue = await response.json();
+                    document.getElementById('queue-count').textContent = queue.length;
+                    
+                    const queueList = document.getElementById('queue-list');
+                    queueList.innerHTML = '';
+                    
+                    if (queue.length === 0) {
+                        queueList.innerHTML = '<div style="color: var(--text-light); font-size: 0.875rem; text-align: center; margin-top: 1rem;">No waiting sessions.</div>';
+                    }
+                    
+                    queue.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'session-card';
+                        if (currentSessionId == item.session_id) {
+                            card.classList.add('active');
+                        }
+                        card.onclick = () => joinSession(item.session_id);
+                        
+                        card.innerHTML = `
+                            <div class="session-id">Session: ${item.session_id}</div>
+                            <div class="session-status">${item.status.replace('_', ' ')}</div>
+                        `;
+                        queueList.appendChild(card);
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch queue", err);
+            }
+        }
+        
+        setInterval(fetchQueue, 3000);
+        fetchQueue();
+
+        function handleManualJoin() {
+            const input = document.getElementById('manual-session-id').value.trim();
+            if (input) {
+                joinSession(input);
+            }
+        }
+
+        let reconnectTimeout = null;
+
+        function connectWebSocket(sessionId, isReconnect = false) {
+            // UI Updates for initial join
+            if (!isReconnect) {
+                emptyState.style.display = 'none';
+                chatMessages.innerHTML = '';
+                activeSessionTitle.textContent = `Active Session: ${sessionId}`;
+                sosBtn.classList.remove('hidden');
+                counselorInput.focus();
+            }
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/counselor/${sessionId}`;
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                // Clear messages to prevent duplicates since server resends history
+                chatMessages.innerHTML = '';
+                
+                if (isReconnect) {
+                    addMessage('System: Reconnected to session.', 'system');
+                } else {
+                    addMessage('System: Connected to student session.', 'system');
+                }
+                counselorInput.disabled = false;
+                counselorSendBtn.disabled = false;
+                
+                if (reconnectTimeout) {
+                    clearTimeout(reconnectTimeout);
+                    reconnectTimeout = null;
+                }
+            };
+
+            ws.onmessage = (event) => {
+                let data = event.data;
+                let sender = 'student';
+                try {
+                    const parsed = JSON.parse(event.data);
+                    data = parsed.content || parsed.text || parsed.message || data;
+                    if (parsed.sender) {
+                        sender = parsed.sender.toLowerCase();
+                    }
+                } catch(e) {}
+                
+                if (sender === 'bot') {
+                    data = 'Bot: ' + data;
+                    sender = 'student';
+                } else if (sender !== 'counselor') {
+                    sender = 'student';
+                }
+                
+                addMessage(data, sender);
+            };
+
+            ws.onclose = (event) => {
+                if (event.code === 1008) {
+                    addMessage(`System: Session ${sessionId} not found in Database. Cannot connect.`, 'system');
+                    counselorInput.disabled = true;
+                    counselorSendBtn.disabled = true;
+                } else {
+                    if (!isReconnect) {
+                        addMessage('System: Session disconnected. Reconnecting...', 'system');
+                    }
+                    counselorInput.disabled = true;
+                    counselorSendBtn.disabled = true;
+                    
+                    // Auto reconnect after 3 seconds
+                    reconnectTimeout = setTimeout(() => {
+                        if (currentSessionId === sessionId) {
+                            connectWebSocket(sessionId, true);
+                        }
+                    }, 3000);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error("WebSocket Error:", error);
+            };
+        }
+
+        function joinSession(sessionId) {
+            if (ws) {
+                // Clear the auto-reconnect timer if we're switching sessions manually
+                if (reconnectTimeout) {
+                    clearTimeout(reconnectTimeout);
+                    reconnectTimeout = null;
+                }
+                ws.onclose = null; // Prevent reconnect logic for the old session
+                ws.close();
+            }
+
+            currentSessionId = sessionId;
+            connectWebSocket(sessionId, false);
+        }
+
+        function addMessage(text, sender) {
+            const msgDiv = document.createElement('div');
+            
+            if (sender === 'system') {
+                msgDiv.style.textAlign = 'center';
+                msgDiv.style.fontSize = '0.75rem';
+                msgDiv.style.color = 'var(--text-light)';
+                msgDiv.style.margin = '0.5rem 0';
+                msgDiv.textContent = text;
+            } else {
+                msgDiv.className = `message ${sender}`;
+                msgDiv.textContent = text;
+            }
+            
+            chatMessages.appendChild(msgDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        counselorForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = counselorInput.value.trim();
+            if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+            addMessage(text, 'counselor');
+            ws.send(text);
+            counselorInput.value = '';
+        });
+
+        async function triggerSOS() {
+            if (!currentSessionId) return;
+
+            document.getElementById('modal-name').textContent = 'Loading...';
+            document.getElementById('modal-reg-no').textContent = 'Loading...';
+            document.getElementById('modal-location').textContent = 'Loading...';
+            document.getElementById('modal-phone').textContent = 'Loading...';
+            
+            document.getElementById('sos-modal').classList.add('active');
+
+            try {
+                const protocol = window.location.protocol;
+                const host = window.location.host;
+                const response = await fetch(`${protocol}//${host}/api/v1/hitl/sos/unmask/${currentSessionId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('modal-name').textContent = data.student_name || 'N/A';
+                    document.getElementById('modal-reg-no').textContent = data.reg_no || 'N/A';
+                    document.getElementById('modal-location').textContent = data.location || 'N/A';
+                    document.getElementById('modal-phone').textContent = data.phone || 'N/A';
+                } else {
+                    document.getElementById('modal-name').textContent = 'Error fetching data';
+                    document.getElementById('modal-reg-no').textContent = 'Error';
+                    document.getElementById('modal-location').textContent = 'Error';
+                    document.getElementById('modal-phone').textContent = 'Error';
+                }
+            } catch (error) {
+                console.error('SOS Error:', error);
+                document.getElementById('modal-name').textContent = 'Connection Error';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('sos-modal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind-Mate Support Chat</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --secondary: #ec4899;
+            --bg-color: #0f172a;
+            --chat-bg: rgba(30, 41, 59, 0.7);
+            --text-dark: #f8fafc;
+            --text-light: #cbd5e1;
+            --bot-msg-bg: rgba(255, 255, 255, 0.05);
+            --user-msg-bg: #6366f1;
+            --user-msg-text: #ffffff;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Animated Background Gradients */
+        .bg-glow {
+            position: fixed; width: 600px; height: 600px;
+            background: radial-gradient(circle, var(--primary) 0%, transparent 70%);
+            top: -200px; left: -200px; opacity: 0.15; filter: blur(80px);
+            animation: float1 10s infinite alternate ease-in-out; z-index: -1;
+        }
+
+        .bg-glow-2 {
+            position: fixed; width: 500px; height: 500px;
+            background: radial-gradient(circle, var(--secondary) 0%, transparent 70%);
+            bottom: -150px; right: -100px; opacity: 0.15; filter: blur(80px);
+            animation: float2 12s infinite alternate ease-in-out; z-index: -1;
+        }
+
+        @keyframes float1 { 0% { transform: translate(0, 0); } 100% { transform: translate(100px, 100px); } }
+        @keyframes float2 { 0% { transform: translate(0, 0); } 100% { transform: translate(-100px, -50px); } }
+
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            height: 90vh;
+            background-color: var(--chat-bg);
+            border: 1px solid var(--border-color);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 1rem;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .chat-header {
+            background-color: rgba(255, 255, 255, 0.02);
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-header h1 {
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--text-light);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #10b981;
+        }
+
+        .status-dot.disconnected {
+            background-color: #ef4444;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 0.875rem 1rem;
+            border-radius: 1rem;
+            line-height: 1.5;
+            font-size: 0.9375rem;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .message.bot {
+            align-self: flex-start;
+            background-color: var(--bot-msg-bg);
+            color: var(--text-dark);
+            border-bottom-left-radius: 0.25rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background-color: var(--user-msg-bg);
+            color: var(--user-msg-text);
+            border-bottom-right-radius: 0.25rem;
+        }
+
+        .message.counselor {
+            align-self: flex-start;
+            background-color: var(--secondary);
+            color: white;
+            border-bottom-left-radius: 0.25rem;
+            border: 1px solid var(--border-color);
+        }
+        
+        .message.system {
+            align-self: center;
+            background-color: transparent;
+            color: var(--text-light);
+            font-size: 0.8rem;
+            text-align: center;
+            border: none;
+            padding: 0.5rem;
+            max-width: 90%;
+        }
+
+        .chat-input {
+            padding: 1.25rem 1.5rem;
+            background-color: rgba(255, 255, 255, 0.02);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 0.875rem 1.25rem;
+            background-color: rgba(255,255,255,0.05);
+            color: var(--text-dark);
+            border: 1px solid var(--border-color);
+            border-radius: 9999px;
+            outline: none;
+            font-size: 0.9375rem;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .chat-input input::placeholder {
+            color: rgba(255,255,255,0.3);
+        }
+
+        .chat-input input:focus {
+            border-color: var(--primary);
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .chat-input input:disabled {
+            background-color: rgba(255,255,255,0.02);
+            color: rgba(255,255,255,0.3);
+            cursor: not-allowed;
+            border-color: var(--border-color);
+        }
+
+        .chat-input button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .chat-input button:hover:not(:disabled) {
+            background-color: var(--primary-hover);
+        }
+
+        .chat-input button:disabled {
+            background-color: rgba(255,255,255,0.1);
+            color: rgba(255,255,255,0.3);
+            cursor: not-allowed;
+        }
+
+        .chat-input button:active {
+            transform: scale(0.95);
+        }
+
+        .chat-input button svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+            transform: translateX(1px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .session-info {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="bg-glow"></div>
+    <div class="bg-glow-2"></div>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            <div>
+                <h1>Mind-Mate Support</h1>
+            </div>
+            <div class="status">
+                <span class="status-dot disconnected" id="connection-dot"></span>
+                <span id="connection-text">Connecting...</span>
+            </div>
+        </div>
+
+        <div class="chat-messages" id="messages-container">
+            <!-- Messages will appear here -->
+        </div>
+
+        <form class="chat-input" id="chat-form">
+            <input type="text" id="message-input" placeholder="Type your message..." autocomplete="off">
+            <button type="submit" aria-label="Send">
+                <svg viewBox="0 0 24 24">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
+                </svg>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        let sessionId = urlParams.get('session_id');
+        if (!sessionId) {
+            alert("No session ID provided. Please start a chat from the home page.");
+            window.location.href = '/';
+        }
+
+        const messagesContainer = document.getElementById('messages-container');
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const connectionDot = document.getElementById('connection-dot');
+        const connectionText = document.getElementById('connection-text');
+
+        const sessionInfo = document.createElement('div');
+        sessionInfo.className = 'session-info';
+        sessionInfo.textContent = `Session: ${sessionId}`;
+        messagesContainer.appendChild(sessionInfo);
+
+        let ws;
+        function connectWebSocket() {
+            if (!sessionId) return;
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/student/${sessionId}`;
+            ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                connectionDot.classList.remove('disconnected');
+                connectionText.textContent = 'Connected';
+                
+                if(messagesContainer.querySelectorAll('.message').length === 0) {
+                     addMessage('bot', 'Hello! I am Mind-Mate. How can I support you today?');
+                }
+            };
+
+            ws.onmessage = (event) => {
+                let data = event.data;
+                let senderClass = 'bot';
+                
+                try {
+                    const parsed = JSON.parse(event.data);
+                    data = parsed.content || parsed.text || parsed.message || data;
+                    if (parsed.sender) {
+                        const senderName = parsed.sender.toUpperCase();
+                        if (senderName === 'USER' || senderName === 'STUDENT') {
+                            senderClass = 'user';
+                        } else if (senderName === 'COUNSELOR') {
+                            senderClass = 'counselor';
+                        } else if (senderName === 'SYSTEM') {
+                            senderClass = 'system';
+                        }
+                    }
+                } catch(e) {}
+                
+                if (senderClass === 'system' && (data.includes("Help is on the way") || data.includes("Emergency"))) {
+                    messageInput.disabled = true;
+                    messageInput.placeholder = "Chat frozen for emergency dispatch...";
+                    const btn = chatForm.querySelector('button');
+                    if (btn) btn.disabled = true;
+                }
+                
+                addMessage(senderClass, data);
+            };
+
+            ws.onclose = (event) => {
+                connectionDot.classList.add('disconnected');
+                if (event.code === 1008) {
+                    connectionText.textContent = `Disconnected: Session ${sessionId} not found in DB.`;
+                } else {
+                    connectionText.textContent = 'Disconnected. Reconnecting...';
+                    setTimeout(connectWebSocket, 3000);
+                }
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket Error:', error);
+                ws.close();
+            };
+        }
+
+        function addMessage(sender, text) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${sender}`;
+            msgDiv.textContent = text;
+            messagesContainer.appendChild(msgDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const text = messageInput.value.trim();
+            if (!text) return;
+
+            addMessage('user', text);
+            messageInput.value = '';
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(text);
+            } else {
+                addMessage('bot', 'System: Offline. Message not delivered.');
+            }
+        });
+
+        connectWebSocket();
+    </script>
+</body>
+</html>
