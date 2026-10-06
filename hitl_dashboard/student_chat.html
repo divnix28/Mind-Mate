@@ -327,9 +327,10 @@
         }
 
         // Setup WebSocket
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // Using window.location.host for dynamic origin detection
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws/student/${sessionId}`;
+        const wsProtocol = (window.location.protocol === 'https:' || window.location.protocol === 'file:') ? 'ws:' : 'ws:';
+        // Using window.location.host for dynamic origin detection, fallback to localhost for file:// testing
+        const host = window.location.host || 'localhost:8000';
+        const wsUrl = `${wsProtocol}//${host}/ws/student/${sessionId}`;
         
         let ws;
 

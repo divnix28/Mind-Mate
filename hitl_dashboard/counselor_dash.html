@@ -43,6 +43,7 @@
         /* Sidebar / Queue */
         .sidebar {
             width: 320px;
+            flex-shrink: 0;
             background-color: var(--panel-bg);
             border-right: 1px solid var(--border-color);
             display: flex;
@@ -537,8 +538,8 @@
         const sosModal = document.getElementById('sosModal');
 
         // Dynamic URL logic
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
+        const wsProtocol = (window.location.protocol === 'https:') ? 'wss:' : 'ws:';
+        const host = window.location.host || 'localhost:8000';
 
         function joinSession(sessionId) {
             currentSessionId = sessionId;
