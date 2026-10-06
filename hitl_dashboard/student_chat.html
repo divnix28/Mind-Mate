@@ -316,11 +316,14 @@
 
         // Extract session ID from URL params (e.g. ?sessionId=xyz)
         const urlParams = new URLSearchParams(window.location.search);
-        const sessionId = urlParams.get('sessionId');
+        let sessionId = urlParams.get('sessionId');
 
         if (!sessionId) {
-            alert('No valid session found. Please start a session from the home page.');
-            // Ideally redirect here
+            sessionId = prompt('No session ID found in URL. Enter a test session ID (or leave blank to abort):', 'test-session-123');
+            if (!sessionId) {
+                alert('No valid session found. Please start a session from the home page.');
+                // Ideally redirect here
+            }
         }
 
         // Setup WebSocket
