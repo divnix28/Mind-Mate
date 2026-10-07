@@ -18,8 +18,13 @@ class RiskAnalyzer:
         # Require GROQ_API_KEY environment variable
         self.client = AsyncGroq(api_key=os.environ.get("GROQ_API_KEY"))
         
-        # We use a fast, reliable model for real-time WebSocket chat
-        self.model = "llama3-8b-8192"
+        # Use active Groq models (llama3-8b-8192 was decommissioned by Groq)
+        self.model = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
+        self.candidate_models = [
+            self.model,
+            "openai/gpt-oss-120b",
+            "qwen/qwen3.8-27b",
+        ]
 
         # Strict JSON-enforcing System Prompt
         self.system_prompt = """You are Mind-Mate, an empathetic digital mental health triage assistant.
@@ -29,9 +34,10 @@ You MUST output ONLY a valid, parseable JSON object with exactly two keys:
 1. "bot_reply": (string) Your active, empathetic, and supportive response to the user.
 2. "risk_tier": (integer) Categorized as follows:
    - 1 (Normal): General conversation, mild stress, or typical student struggles.
-   - 2 (Counselor needed): Noticeable distress, severe anxiety, depressive signs, hopelessness.
+   - 2 (Counselor needed): Noticeable distress, severe anxiety, depressive signs, hopelessness, OR if user asks to speak to/connect with a counselor or human.
    - 3 (Immediate SOS): Mentions of self-harm, suicide, or immediate physical danger.
 
+CRITICAL: If the user says 'can I talk to a counselor', 'talk to counselor', 'connect me to a human', or requests human staff, ALWAYS set risk_tier to 2.
 Do not include markdown blocks, pleasantries, or preamble. Return ONLY the raw JSON object."""
 
         # Retained legacy regex patterns for emergency local fallback
@@ -90,37 +96,46 @@ Do not include markdown blocks, pleasantries, or preamble. Return ONLY the raw J
         messages.extend(chat_history)
         messages.append({"role": "user", "content": latest_scrubbed_message})
 
-        try:
-            # Call Groq API with forced JSON response format
-            completion = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                temperature=0.3, # Low temp for more deterministic tiering
-                response_format={"type": "json_object"}
-            )
-            
-            raw_response = completion.choices[0].message.content
-            parsed_data = json.loads(raw_response)
-            
-            # Validate output types to prevent downstream crashes in the WebSockets
-            bot_reply = str(parsed_data.get("bot_reply", "I'm here to listen. Tell me more."))
-            risk_tier = int(parsed_data.get("risk_tier", 2))
-            
-            if risk_tier not in [1, 2, 3]:
-                risk_tier = 2
+        last_error = None
+        for model_name in self.candidate_models:
+            try:
+                # Call Groq API with forced JSON response format
+                completion = await self.client.chat.completions.create(
+                    model=model_name,
+                    messages=messages,
+                    temperature=0.3, # Low temp for more deterministic tiering
+                    response_format={"type": "json_object"}
+                )
                 
-            return {
-                "bot_reply": bot_reply,
-                "risk_tier": risk_tier
-            }
+                raw_response = completion.choices[0].message.content
+                parsed_data = json.loads(raw_response)
+                
+                # Validate output types to prevent downstream crashes in the WebSockets
+                bot_reply = str(parsed_data.get("bot_reply", "I'm here to listen. Tell me more."))
+                risk_tier = int(parsed_data.get("risk_tier", 2))
+                
+                if risk_tier not in [1, 2, 3]:
+                    risk_tier = 2
 
-        except Exception as e:
-            logger.error(f"Groq API Error or JSON Parsing failure: {e}")
-            
-            # Immediate safety fallback if Groq API fails
-            emergency_tier = self._fallback_safety_check(latest_scrubbed_message)
-            
-            return {
-                "bot_reply": "I'm having a little trouble connecting. Please hold on.",
-                "risk_tier": emergency_tier
-            }
+                # If student explicitly asks for counselor or human, enforce Tier 2 escalation
+                if re.search(r"\b(counselor|counsellor|human|therapist|doctor|talk to someone|speak to someone)\b", latest_scrubbed_message, re.IGNORECASE):
+                    risk_tier = max(risk_tier, 2)
+                    
+                return {
+                    "bot_reply": bot_reply,
+                    "risk_tier": risk_tier
+                }
+
+            except Exception as e:
+                last_error = e
+                logger.warning(f"Groq model {model_name} failed: {e}. Trying next candidate...")
+
+        logger.error(f"All Groq models failed. Last error: {last_error}")
+        
+        # Immediate safety fallback if all Groq models fail
+        emergency_tier = self._fallback_safety_check(latest_scrubbed_message)
+        
+        return {
+            "bot_reply": "I'm having a little trouble connecting. Please hold on.",
+            "risk_tier": emergency_tier
+        }
