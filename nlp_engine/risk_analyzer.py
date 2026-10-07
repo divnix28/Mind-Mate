@@ -34,9 +34,10 @@ You MUST output ONLY a valid, parseable JSON object with exactly two keys:
 1. "bot_reply": (string) Your active, empathetic, and supportive response to the user.
 2. "risk_tier": (integer) Categorized as follows:
    - 1 (Normal): General conversation, mild stress, or typical student struggles.
-   - 2 (Counselor needed): Noticeable distress, severe anxiety, depressive signs, hopelessness.
+   - 2 (Counselor needed): Noticeable distress, severe anxiety, depressive signs, hopelessness, OR if user asks to speak to/connect with a counselor or human.
    - 3 (Immediate SOS): Mentions of self-harm, suicide, or immediate physical danger.
 
+CRITICAL: If the user says 'can I talk to a counselor', 'talk to counselor', 'connect me to a human', or requests human staff, ALWAYS set risk_tier to 2.
 Do not include markdown blocks, pleasantries, or preamble. Return ONLY the raw JSON object."""
 
         # Retained legacy regex patterns for emergency local fallback
@@ -115,6 +116,10 @@ Do not include markdown blocks, pleasantries, or preamble. Return ONLY the raw J
                 
                 if risk_tier not in [1, 2, 3]:
                     risk_tier = 2
+
+                # If student explicitly asks for counselor or human, enforce Tier 2 escalation
+                if re.search(r"\b(counselor|counsellor|human|therapist|doctor|talk to someone|speak to someone)\b", latest_scrubbed_message, re.IGNORECASE):
+                    risk_tier = max(risk_tier, 2)
                     
                 return {
                     "bot_reply": bot_reply,
