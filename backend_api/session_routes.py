@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 from .database import get_db
 from .models import ChatSession, Message, Student, SessionStatus, SenderType
+from .connection_manager import manager
 from backend_api.anonymizer import PIIAnonymizer
 
 router = APIRouter(prefix="/api/v1/sessions", tags=["Session Lifecycle & Privacy"])
@@ -14,7 +15,6 @@ def start_chat_session(db: Session = Depends(get_db)):
     Creates a new, isolated confidential student chat session in Tier 1 (LIVE_BOT).
     Guarantees privacy: counselors cannot view or join until risk triage escalation.
     """
-    # Find or create a default student record
     student = db.query(Student).first()
     if not student:
         student = Student(
@@ -47,9 +47,6 @@ def start_chat_session(db: Session = Depends(get_db)):
 
 @router.get("/{session_id}")
 def get_session_info(session_id: int, db: Session = Depends(get_db)):
-    """
-    Returns high-level status for a session.
-    """
     session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail=f"Session #{session_id} not found.")
@@ -64,8 +61,7 @@ def get_session_info(session_id: int, db: Session = Depends(get_db)):
 @router.get("/{session_id}/history")
 def get_session_history(session_id: int, db: Session = Depends(get_db)):
     """
-    Retrieves complete chronological message history and active tier status for a session.
-    Used on page load / hard-refresh to restore UI state accurately.
+    Retrieves complete chronological message history for the student on reload/refresh.
     """
     session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not session:
@@ -91,7 +87,7 @@ def get_session_history(session_id: int, db: Session = Depends(get_db)):
     }
 
 @router.post("/{session_id}/escalate")
-def request_counselor_escalation(session_id: int, db: Session = Depends(get_db)):
+async def request_counselor_escalation(session_id: int, db: Session = Depends(get_db)):
     """
     Voluntary escalation: student explicitly requests a human counselor.
     Transitions session from LIVE_BOT to AWAITING_COUNSELOR.
@@ -102,7 +98,22 @@ def request_counselor_escalation(session_id: int, db: Session = Depends(get_db))
 
     if session.status == SessionStatus.LIVE_BOT:
         session.status = SessionStatus.AWAITING_COUNSELOR
+        # Track escalation point
+        last_msg = db.query(Message).filter(
+            Message.session_id == session_id,
+            Message.sender_type == SenderType.STUDENT
+        ).order_by(Message.timestamp.desc()).first()
+        if last_msg:
+            session.escalation_msg_id = last_msg.id
+        session.escalated_at = datetime.now(timezone.utc)
         db.commit()
+
+        # Notify counselors
+        await manager.broadcast_to_counselors({
+            "event": "NEW_MODERATE_RISK",
+            "session_id": session_id,
+            "trigger": "Student voluntarily requested human counselor"
+        })
 
     return {
         "status": "success",
@@ -111,9 +122,10 @@ def request_counselor_escalation(session_id: int, db: Session = Depends(get_db))
     }
 
 @router.post("/{session_id}/return_to_bot")
-def return_to_bot_companion(session_id: int, db: Session = Depends(get_db)):
+async def return_to_bot_companion(session_id: int, db: Session = Depends(get_db)):
     """
-    Returns session to Tier 1 AI companion mode, restoring active LLM responses.
+    Returns session to Tier 1 AI companion mode, restoring active LLM responses,
+    and immediately alerts the counselor that the counseling session is closed.
     """
     session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not session:
@@ -121,6 +133,19 @@ def return_to_bot_companion(session_id: int, db: Session = Depends(get_db)):
 
     session.status = SessionStatus.LIVE_BOT
     db.commit()
+
+    # NOTIFY THE COUNSELOR IMMEDIATELY VIA WEBSOCKET
+    await manager.send_to_role(session_id, "counselor", {
+        "event": "STUDENT_RETURNED_TO_BOT",
+        "session_id": session_id,
+        "message": "The student has voluntarily switched back to Mind-Mate AI Companion mode. This counseling session is now concluded."
+    })
+
+    # Alert queue monitors to remove session from active triage queue
+    await manager.broadcast_to_counselors({
+        "event": "SESSION_RESOLVED",
+        "session_id": session_id
+    })
 
     return {
         "status": "success",

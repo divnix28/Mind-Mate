@@ -43,30 +43,40 @@ class PIIAnonymizer:
             )
         )
 
-        # 1b. Common Indian Names Dictionary
+        # 1b. Common Indian & International Names Dictionary (Expanded)
         indian_names = [
             "Aarav", "Aanya", "Aarush", "Aayush", "Abhay", "Abhinav", "Abhishek", "Aditi", "Aditya",
-            "Akash", "Akshay", "Amit", "Amrita", "Ananya", "Aniket", "Anil", "Anish", "Anjali",
+            "Advait", "Akash", "Akshay", "Amit", "Amrita", "Ananya", "Aniket", "Anil", "Anish", "Anjali",
             "Ankit", "Ankush", "Anmol", "Ansh", "Anushka", "Arjun", "Arman", "Arnav", "Aryan",
-            "Ashish", "Ashok", "Atharv", "Avani", "Ayush", "Bhavya", "Chetan", "Chirag", "Deepa",
-            "Deepak", "Dev", "Dhruv", "Divya", "Divyanshu", "Gaurav", "Gautam", "Gayatri", "Geeta",
-            "Harish", "Harsh", "Hemant", "Himanshu", "Isha", "Ishaan", "Jay", "Kajal", "Kamal",
+            "Ashish", "Ashok", "Atharv", "Avani", "Ayaan", "Ayush", "Bhavya", "Chetan", "Chirag", "Deepa",
+            "Deepak", "Dev", "Devansh", "Dhruv", "Divya", "Divyanshu", "Gaurav", "Gautam", "Gayatri", "Geeta",
+            "Harish", "Harsh", "Hemant", "Himanshu", "Isha", "Ishaan", "Jay", "Kabir", "Kajal", "Kamal",
             "Kapil", "Karan", "Kavya", "Keshav", "Khushi", "Kiran", "Komal", "Krishna", "Kunal",
             "Lakshya", "Madhav", "Manish", "Manoj", "Mayank", "Meera", "Mohan", "Mohit", "Mukesh",
             "Naveen", "Navya", "Neha", "Nidhi", "Nikhil", "Nilesh", "Nisha", "Nitin", "Om",
             "Pankaj", "Parth", "Payal", "Pooja", "Poonam", "Pradeep", "Prakash", "Pranav", "Prashant",
             "Prateek", "Praveen", "Prem", "Priya", "Priyanka", "Rahul", "Raj", "Rajat", "Rajeev",
-            "Rajesh", "Rakesh", "Ramesh", "Ravi", "Rishabh", "Rishi", "Riya", "Rohan", "Rohit",
-            "Rupesh", "Sachin", "Sahil", "Sameer", "Sandeep", "Sanjay", "Sanjeev", "Sarthak", "Sarvesh",
-            "Satish", "Saurabh", "Shashank", "Shivam", "Shivani", "Shreya", "Shubham", "Siddhesh",
+            "Rajesh", "Rakesh", "Ramesh", "Ravi", "Reyansh", "Rishabh", "Rishi", "Riya", "Rohan", "Rohit",
+            "Rudra", "Rupesh", "Sachin", "Sahil", "Samarth", "Sameer", "Sandeep", "Sanjay", "Sanjeev", "Sarthak", "Sarvesh",
+            "Satish", "Saurabh", "Shaurya", "Shashank", "Shivam", "Shivani", "Shreya", "Shubham", "Siddhesh",
             "Siddharth", "Simran", "Sneha", "Sonia", "Sourabh", "Subhash", "Suhas", "Sujit", "Suman",
             "Sumit", "Sunil", "Suraj", "Suresh", "Surya", "Swapnil", "Swati", "Tanmay", "Tanvi",
             "Tarun", "Tejas", "Tushar", "Umesh", "Utkarsh", "Vaibhav", "Varun", "Vicky", "Vidya",
-            "Vijay", "Vikas", "Vinay", "Vinod", "Vipul", "Vishal", "Vivek", "Yash", "Yuvraj",
-            "varun", "rahul", "rohan", "priya", "aarav", "divyanshu", "siddhesh", "amit", "alex", "david"
+            "Vihan", "Vihaan", "Vijay", "Vikas", "Vinay", "Vinod", "Vipul", "Vishal", "Vivek", "Yash", "Yuvraj",
+            "vihan", "vihaan", "varun", "rahul", "rohan", "priya", "aarav", "divyanshu", "siddhesh", "amit", "alex", "david"
         ]
         self.analyzer.registry.add_recognizer(
             PatternRecognizer(supported_entity="PERSON", deny_list=indian_names)
+        )
+
+        # 1c. Name Introduction Context Recognizer (Catches any name after "my name is", "i am", "call me", etc.)
+        name_intro_pattern = Pattern(
+            name="name_intro_lookbehind",
+            regex=r"(?i)(?<=\bmy name is\s)[a-zA-Z]{2,25}\b|(?<=\bi am\s)[a-zA-Z]{2,25}\b|(?<=\bi\'m\s)[a-zA-Z]{2,25}\b|(?<=\bthis is\s)[a-zA-Z]{2,25}\b|(?<=\bcall me\s)[a-zA-Z]{2,25}\b|(?<=\bmyself\s)[a-zA-Z]{2,25}\b|(?<=\bname is\s)[a-zA-Z]{2,25}\b",
+            score=0.95
+        )
+        self.analyzer.registry.add_recognizer(
+            PatternRecognizer(supported_entity="PERSON", patterns=[name_intro_pattern])
         )
 
         # 2. Existing: Social Handle
