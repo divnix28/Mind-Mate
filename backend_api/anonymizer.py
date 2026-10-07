@@ -22,14 +22,51 @@ class PIIAnonymizer:
         self._add_custom_recognizers()
 
     def _add_custom_recognizers(self):
-        # 1. Existing: Student ID
-        student_id_pattern = Pattern(
-            name="student_id_regex",
-            regex=r"\b\d{2}[A-Z]{3}\d{4}\b",
+        # 1. Enhanced Student ID / Registration Number Recognizer
+        # Matches alphanumeric college formats (e.g. 24BCE13121, 21BCE1001, 2024BCSE089)
+        student_id_alphanumeric = Pattern(
+            name="student_id_alphanumeric",
+            regex=r"\b\d{2,4}[A-Za-z]{2,5}\d{3,6}\b",
             score=0.95
         )
+        # Contextual numeric roll numbers (e.g. 10001010)
+        student_id_numeric = Pattern(
+            name="student_id_numeric",
+            regex=r"\b\d{6,12}\b",
+            score=0.40
+        )
         self.analyzer.registry.add_recognizer(
-            PatternRecognizer(supported_entity="STUDENT_ID", patterns=[student_id_pattern])
+            PatternRecognizer(
+                supported_entity="STUDENT_ID",
+                patterns=[student_id_alphanumeric, student_id_numeric],
+                context=["registration", "reg", "roll", "student", "admit", "card", "enrollment", "number", "id"]
+            )
+        )
+
+        # 1b. Common Indian Names Dictionary
+        indian_names = [
+            "Aarav", "Aanya", "Aarush", "Aayush", "Abhay", "Abhinav", "Abhishek", "Aditi", "Aditya",
+            "Akash", "Akshay", "Amit", "Amrita", "Ananya", "Aniket", "Anil", "Anish", "Anjali",
+            "Ankit", "Ankush", "Anmol", "Ansh", "Anushka", "Arjun", "Arman", "Arnav", "Aryan",
+            "Ashish", "Ashok", "Atharv", "Avani", "Ayush", "Bhavya", "Chetan", "Chirag", "Deepa",
+            "Deepak", "Dev", "Dhruv", "Divya", "Divyanshu", "Gaurav", "Gautam", "Gayatri", "Geeta",
+            "Harish", "Harsh", "Hemant", "Himanshu", "Isha", "Ishaan", "Jay", "Kajal", "Kamal",
+            "Kapil", "Karan", "Kavya", "Keshav", "Khushi", "Kiran", "Komal", "Krishna", "Kunal",
+            "Lakshya", "Madhav", "Manish", "Manoj", "Mayank", "Meera", "Mohan", "Mohit", "Mukesh",
+            "Naveen", "Navya", "Neha", "Nidhi", "Nikhil", "Nilesh", "Nisha", "Nitin", "Om",
+            "Pankaj", "Parth", "Payal", "Pooja", "Poonam", "Pradeep", "Prakash", "Pranav", "Prashant",
+            "Prateek", "Praveen", "Prem", "Priya", "Priyanka", "Rahul", "Raj", "Rajat", "Rajeev",
+            "Rajesh", "Rakesh", "Ramesh", "Ravi", "Rishabh", "Rishi", "Riya", "Rohan", "Rohit",
+            "Rupesh", "Sachin", "Sahil", "Sameer", "Sandeep", "Sanjay", "Sanjeev", "Sarthak", "Sarvesh",
+            "Satish", "Saurabh", "Shashank", "Shivam", "Shivani", "Shreya", "Shubham", "Siddhesh",
+            "Siddharth", "Simran", "Sneha", "Sonia", "Sourabh", "Subhash", "Suhas", "Sujit", "Suman",
+            "Sumit", "Sunil", "Suraj", "Suresh", "Surya", "Swapnil", "Swati", "Tanmay", "Tanvi",
+            "Tarun", "Tejas", "Tushar", "Umesh", "Utkarsh", "Vaibhav", "Varun", "Vicky", "Vidya",
+            "Vijay", "Vikas", "Vinay", "Vinod", "Vipul", "Vishal", "Vivek", "Yash", "Yuvraj",
+            "varun", "rahul", "rohan", "priya", "aarav", "divyanshu", "siddhesh", "amit", "alex", "david"
+        ]
+        self.analyzer.registry.add_recognizer(
+            PatternRecognizer(supported_entity="PERSON", deny_list=indian_names)
         )
 
         # 2. Existing: Social Handle

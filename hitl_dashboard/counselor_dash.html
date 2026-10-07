@@ -507,12 +507,6 @@
             counselorWsText.textContent = 'Active Counselor Connected';
             showToast(`Joined Session #${sessionId}`, 'success');
 
-            // Send an initial greeting so backend transitions status to LIVE_COUNSELOR
-            // and student receives a warm, professional counselor introduction
-            const joinGreeting = "Hello, I am a campus counselor. I have joined the session to support you.";
-            counselorSocket.send(joinGreeting);
-            appendCounselorMessage(joinGreeting);
-
             activeStatusBadge.className = 'badge badge-info';
             activeStatusBadge.textContent = 'LIVE_COUNSELOR';
             addOrUpdateSessionInQueue(sessionId, 'LIVE_COUNSELOR', 'Counselor active');
