@@ -37,6 +37,8 @@ class ChatSession(Base):
     student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
     status = Column(Enum(SessionStatus), default=SessionStatus.LIVE_BOT)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    escalation_msg_id = Column(Integer, nullable=True)
+    escalated_at = Column(DateTime, nullable=True)
 
     student = relationship("Student")
     messages = relationship("Message", back_populates="session")

@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session
 load_dotenv()
 
 from .database import engine, Base, get_db
+from .connection_manager import manager
 from .hitl_routes import router as hitl_router
 from .session_routes import router as session_router
 from .models import ChatSession, Message, SessionStatus, SenderType
@@ -31,47 +33,6 @@ app.add_middleware(
 
 anonymizer = PIIAnonymizer()
 risk_analyzer = RiskAnalyzer()
-
-# --- Connection Manager ---
-class ConnectionManager:
-    def __init__(self):
-        self.active_sessions = {}
-        self.counselor_connections = set()
-
-    async def connect(self, websocket: WebSocket, session_id: int, role: str):
-        await websocket.accept()
-        if session_id not in self.active_sessions:
-            self.active_sessions[session_id] = {}
-        self.active_sessions[session_id][role] = websocket
-        if role == "counselor":
-            self.counselor_connections.add(websocket)
-
-    def disconnect(self, session_id: int, role: str, websocket: WebSocket = None):
-        if session_id in self.active_sessions and role in self.active_sessions[session_id]:
-            del self.active_sessions[session_id][role]
-            if not self.active_sessions[session_id]:
-                del self.active_sessions[session_id]
-        if role == "counselor" and websocket in self.counselor_connections:
-            self.counselor_connections.remove(websocket)
-
-    async def send_to_role(self, session_id: int, role: str, message: dict):
-        if session_id in self.active_sessions and role in self.active_sessions[session_id]:
-            try:
-                await self.active_sessions[session_id][role].send_json(message)
-            except Exception:
-                pass
-
-    async def broadcast_to_counselors(self, message: dict):
-        dead_sockets = []
-        for ws in self.counselor_connections:
-            try:
-                await ws.send_json(message)
-            except Exception:
-                dead_sockets.append(ws)
-        for dead in dead_sockets:
-            self.counselor_connections.discard(dead)
-
-manager = ConnectionManager()
 
 @app.get("/api/v1/health")
 def health_check():
@@ -123,24 +84,36 @@ async def student_chat_endpoint(websocket: WebSocket, session_id: int, db: Sessi
                     safe_content = anonymizer.clean_text(msg.content) if role == "user" else msg.content
                     chat_history.append({"role": role, "content": safe_content})
                     
-                # Await Member 3's LLM evaluation
+                # Await LLM evaluation
                 llm_response = await risk_analyzer.generate_triage_response(chat_history, scrubbed_text)
                 
                 if llm_response["risk_tier"] == 1:
-                    bot_msg = Message(session_id=session_id, sender_type=SenderType.BOT, content=llm_response["bot_reply"])
+                    # Scrub bot reply as well so it never mirrors student names or identifiers
+                    safe_bot_reply = anonymizer.clean_text(llm_response["bot_reply"])
+                    bot_msg = Message(session_id=session_id, sender_type=SenderType.BOT, content=safe_bot_reply)
                     db.add(bot_msg)
                     db.commit()
-                    await websocket.send_json({"sender": "BOT", "content": llm_response["bot_reply"]})
+                    await websocket.send_json({"sender": "BOT", "content": safe_bot_reply})
                 else:
                     # Halt bot and route to Human (Tier 2/3)
                     chat_session.status = SessionStatus.AWAITING_COUNSELOR
+                    chat_session.escalation_msg_id = new_msg.id
+                    chat_session.escalated_at = datetime.now(timezone.utc)
                     db.commit()
                     await websocket.send_json({
                         "sender": "SYSTEM",
                         "content": "Routing you to a human counselor safely and anonymously..."
                     })
-                    await manager.send_to_role(session_id, "counselor", {"event": "NEW_MODERATE_RISK", "session_id": session_id})
-                    await manager.broadcast_to_counselors({"event": "NEW_MODERATE_RISK", "session_id": session_id})
+                    await manager.send_to_role(session_id, "counselor", {
+                        "event": "NEW_MODERATE_RISK", 
+                        "session_id": session_id,
+                        "trigger": scrubbed_text
+                    })
+                    await manager.broadcast_to_counselors({
+                        "event": "NEW_MODERATE_RISK", 
+                        "session_id": session_id,
+                        "trigger": scrubbed_text
+                    })
 
             elif chat_session.status == SessionStatus.AWAITING_COUNSELOR:
                 # Waiting for a counselor to claim the room
@@ -149,7 +122,11 @@ async def student_chat_endpoint(websocket: WebSocket, session_id: int, db: Sessi
                     "content": "Your request is in the counselor queue. A campus counselor will join your session momentarily."
                 })
                 await manager.send_to_role(session_id, "counselor", {"sender": "STUDENT", "content": scrubbed_text})
-                await manager.broadcast_to_counselors({"event": "NEW_MODERATE_RISK", "session_id": session_id})
+                await manager.broadcast_to_counselors({
+                    "event": "NEW_MODERATE_RISK", 
+                    "session_id": session_id,
+                    "trigger": scrubbed_text
+                })
 
             elif chat_session.status == SessionStatus.LIVE_COUNSELOR:
                 # Active counselor session

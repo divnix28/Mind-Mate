@@ -507,13 +507,34 @@
           counselorSocket.close();
         }
 
-        // Fetch past messages to display in console
+        // Fetch clinical transcript (CRITICAL: OMIT student's private AI banter!)
         try {
-          const historyRes = await fetch(`/api/v1/sessions/${sessionId}/history`);
-          if (historyRes.ok) {
-            const historyData = await historyRes.json();
-            if (historyData.messages && historyData.messages.length > 0) {
-              historyData.messages.forEach(msg => {
+          const transcriptRes = await fetch(`/api/v1/hitl/session/${sessionId}/transcript`);
+          if (transcriptRes.ok) {
+            const transcriptData = await transcriptRes.json();
+            
+            // Display Triage Escalation Briefing Banner
+            if (transcriptData.escalation_trigger) {
+              const briefRow = document.createElement('div');
+              briefRow.className = 'message-row system';
+              briefRow.innerHTML = `
+                <div class="system-notice" style="border-left: 3px solid var(--amber-400); background: rgba(245, 158, 11, 0.12); flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 14px; width: 100%;">
+                  <div style="font-weight: 700; color: var(--amber-400); display: flex; align-items: center; gap: 6px;">
+                    <span>⚠️</span> Triage Escalation Trigger:
+                  </div>
+                  <div style="font-size: 0.82rem; color: var(--text-primary); font-style: italic;">
+                    "${highlightPIITags(transcriptData.escalation_trigger)}"
+                  </div>
+                  <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 2px;">
+                    🔒 Zero-Knowledge Protocol: Student's prior private AI companion banter is hidden to protect student confidentiality.
+                  </div>
+                </div>
+              `;
+              consoleMessages.appendChild(briefRow);
+            }
+
+            if (transcriptData.messages && transcriptData.messages.length > 0) {
+              transcriptData.messages.forEach(msg => {
                 if (msg.sender === 'STUDENT') {
                   appendStudentScrubbedMessage(msg.content, msg.timestamp);
                 } else if (msg.sender === 'COUNSELOR') {
@@ -523,7 +544,7 @@
             }
           }
         } catch (e) {
-          console.warn('Could not load session history for counselor:', e);
+          console.warn('Could not load clinical transcript:', e);
         }
 
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -545,6 +566,10 @@
             activeStatusBadge.className = 'badge badge-info';
             activeStatusBadge.textContent = 'LIVE_COUNSELOR';
 
+            counselorInput.disabled = false;
+            counselorInput.placeholder = 'Type your clinical response... (Enter to send)';
+            const sendBtn = document.getElementById('counselorSendBtn');
+            if (sendBtn) sendBtn.disabled = false;
             counselorInput.focus();
             fetchTriageQueue();
           };
@@ -592,11 +617,50 @@
           return;
         }
 
-        // Moderate risk notification event: {"event": "NEW_MODERATE_RISK"}
+        // Student voluntarily switched back to AI Companion mode
+        if (data.event === 'STUDENT_RETURNED_TO_BOT') {
+          playAudioAlert('alert');
+          showToast('⚠️ Student switched back to AI Companion mode. Session closed.', 'warning', 8000);
+          appendSystemConsoleMessage('⚠️ The student has voluntarily switched back to Mind-Mate AI Companion mode. This counseling session is now closed.');
+
+          activeStatusBadge.className = 'badge badge-tier1';
+          activeStatusBadge.textContent = 'RETURNED TO BOT';
+
+          counselorInput.disabled = true;
+          counselorInput.placeholder = 'Student returned to AI Companion. Chat closed.';
+          const sendBtn = document.getElementById('counselorSendBtn');
+          if (sendBtn) sendBtn.disabled = true;
+
+          const exitCard = document.createElement('div');
+          exitCard.className = 'message-row system';
+          exitCard.innerHTML = `
+            <div class="system-notice" style="background: rgba(99, 102, 241, 0.15); border-left: 3px solid var(--indigo-400); justify-content: space-between; width: 100%;">
+              <span>Counseling intervention concluded by student.</span>
+              <button id="closeWorkspaceBtn" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 10px;">Close Workspace ✕</button>
+            </div>
+          `;
+          consoleMessages.appendChild(exitCard);
+          scrollConsoleBottom();
+
+          const closeBtn = document.getElementById('closeWorkspaceBtn');
+          if (closeBtn) {
+            closeBtn.addEventListener('click', closeActiveWorkspace);
+          }
+
+          fetchTriageQueue();
+          return;
+        }
+
+        // Triage Escalation Alert
         if (data.event === 'NEW_MODERATE_RISK') {
           playAudioAlert('alert');
           showToast(`⚠️ Session #${data.session_id || currentSessionId}: Triage Escalation Alert!`, 'warning', 6000);
           appendSystemConsoleMessage('⚠️ Automated Alert: Risk detected in student conversation. Counselor intervention requested.');
+          fetchTriageQueue();
+          return;
+        }
+
+        if (data.event === 'SESSION_RESOLVED') {
           fetchTriageQueue();
           return;
         }
@@ -607,6 +671,21 @@
           playAudioAlert('chime');
           fetchTriageQueue();
         }
+      }
+
+      function closeActiveWorkspace() {
+        if (counselorSocket) {
+          counselorSocket.close();
+          counselorSocket = null;
+        }
+        currentSessionId = null;
+        activeSessionWorkspace.style.display = 'none';
+        consoleEmptyState.style.display = 'flex';
+        counselorInput.disabled = false;
+        counselorInput.placeholder = 'Type your clinical response... (Enter to send)';
+        const sendBtn = document.getElementById('counselorSendBtn');
+        if (sendBtn) sendBtn.disabled = false;
+        fetchTriageQueue();
       }
 
       // Append scrubbed student message with high-visibility PII tags
