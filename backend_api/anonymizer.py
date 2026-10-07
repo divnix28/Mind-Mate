@@ -29,11 +29,11 @@ class PIIAnonymizer:
             regex=r"\b\d{2,4}[A-Za-z]{2,5}\d{3,6}\b",
             score=0.95
         )
-        # Contextual numeric roll numbers (e.g. 10001010)
+        # Numeric roll numbers (e.g. 10001010, 101010101)
         student_id_numeric = Pattern(
             name="student_id_numeric",
-            regex=r"\b\d{6,12}\b",
-            score=0.40
+            regex=r"\b\d{8,10}\b",
+            score=0.75
         )
         self.analyzer.registry.add_recognizer(
             PatternRecognizer(
