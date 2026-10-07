@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mind-Mate | Counselor Triage & SOS Dispatch Console</title>
+  <link rel="stylesheet" href="css/common.css">
+  <link rel="stylesheet" href="css/counselor_dash.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220%22%3E<text y=%2226%22 font-size=%2226%22>🩺</text></svg>">
+</head>
+<body>
+
+  <div class="counselor-app-container">
+    <!-- LEFT SIDEBAR: Escalated Triage Queue -->
+    <aside class="queue-sidebar">
+      <div class="counselor-nav-header">
+        <div class="counselor-brand">
+          <div class="counselor-logo-badge">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+            </svg>
+          </div>
+          <div class="counselor-brand-text">
+            <h1>Mind-Mate Clinical</h1>
+            <p>HITL Intervention Console</p>
+          </div>
+        </div>
+        <div class="status-beacon live">
+          <div class="beacon-dot"></div>
+          <span>On-Duty</span>
+        </div>
+      </div>
+
+      <!-- Quick Session ID Connector -->
+      <div class="quick-connect-bar">
+        <h3>Connect Session by ID</h3>
+        <div class="quick-connect-form">
+          <input
+            type="number"
+            id="quickConnectInput"
+            class="quick-connect-input"
+            placeholder="e.g., 1"
+            min="1"
+          />
+          <button id="quickConnectBtn" class="quick-connect-btn">Connect</button>
+        </div>
+      </div>
+
+      <!-- Queue Header -->
+      <div class="queue-list-header">
+        <div class="queue-title">
+          <span>Escalation Queue</span>
+          <span class="queue-counter-badge" id="queueCount">1 Awaiting</span>
+        </div>
+      </div>
+
+      <!-- Queue Items List -->
+      <div class="queue-items-container" id="queueItems">
+        <!-- Rendered dynamically by counselor_dash.js -->
+      </div>
+    </aside>
+
+    <!-- RIGHT MAIN VIEW: Active Chat & Command Console -->
+    <main class="counselor-main-view">
+      <!-- Empty State View (Before session is selected) -->
+      <div class="active-empty-state" id="emptyStateView">
+        <div class="empty-state-card">
+          <div class="empty-icon-shield">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+          </div>
+          <h2>Counselor Standby Mode</h2>
+          <p>
+            Select an escalated session from the triage queue on the left, or enter a student session ID above to start an active intervention channel.
+          </p>
+          <div style="display: flex; gap: 12px; justify-content: center;">
+            <a href="student_chat.html" target="_blank" class="btn btn-secondary">
+              Open Student Portal in New Tab
+            </a>
+            <a href="index.html" class="btn btn-secondary">
+              Home Portal
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Chat View (Shown when session is active) -->
+      <div id="activeChatView" style="display: none; flex-direction: column; height: 100%;">
+        <!-- Active Session Header Bar -->
+        <header class="active-session-header">
+          <div class="active-meta">
+            <div class="active-student-avatar">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div class="active-title-info">
+              <h2 id="activeSessionTitle">Student Session #1</h2>
+              <span class="scrub-status-tag">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                </svg>
+                PII Scrubbing Enforced
+              </span>
+            </div>
+          </div>
+
+          <div class="active-header-actions">
+            <div class="status-beacon live" id="activeStatusBeacon">
+              <div class="beacon-dot"></div>
+              <span id="activeStatusText">Counselor Live</span>
+            </div>
+
+            <!-- MASSIVE RED EMERGENCY BREAK-GLASS BUTTON -->
+            <button id="sosBreakGlassBtn" class="btn-emergency-sos" title="Break anonymity seal and dispatch campus security">
+              🚨 VERIFY EMERGENCY &amp; DISPATCH
+            </button>
+          </div>
+        </header>
+
+        <!-- Chat Stream -->
+        <div class="counselor-chat-stream" id="counselorChatStream">
+          <!-- Messages & scrubbed transcripts rendered dynamically -->
+        </div>
+
+        <!-- Clinical Quick Responses Bar -->
+        <div class="clinical-prompts-bar">
+          <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Quick Canned:</span>
+          <button class="clinical-prompt-chip" data-text="Hello, I am a campus counselor here with you. Take your time, you are in a safe place.">
+            "I'm here with you"
+          </button>
+          <button class="clinical-prompt-chip" data-text="Take a slow, deep breath. Can you tell me what made you feel this way?">
+            "Take a deep breath"
+          </button>
+          <button class="clinical-prompt-chip" data-text="Are you in a safe room right now? I want to make sure you are okay.">
+            "Are you in a safe place?"
+          </button>
+          <button class="clinical-prompt-chip" data-text="You don't have to carry this alone. We can talk through this together.">
+            "You are not alone"
+          </button>
+        </div>
+
+        <!-- Counselor Input Footer -->
+        <footer class="counselor-input-area">
+          <div class="counselor-input-box">
+            <textarea
+              id="counselorInput"
+              class="counselor-textarea"
+              rows="1"
+              placeholder="Type your response to the student... (Press Enter to send)"
+            ></textarea>
+            <button id="counselorSendBtn" class="counselor-send-btn" title="Send response to student" aria-label="Send response">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </footer>
+      </div>
+    </main>
+  </div>
+
+  <!-- PRE-DISPATCH CONFIRMATION MODAL -->
+  <div class="modal-overlay" id="confirmSosModal">
+    <div class="modal-content" style="max-width: 480px; padding: 26px;">
+      <div style="font-size: 2.4rem; text-align: center; margin-bottom: 12px;">⚠️</div>
+      <h2 style="text-align: center; color: #f87171; margin-bottom: 8px;">Break-Glass Emergency Protocol</h2>
+      <p style="text-align: center; font-size: 0.9rem; line-height: 1.5; margin-bottom: 22px;">
+        Clicking proceed will unmask the student's protected identity and hostel registry records. The session will transition to <strong>CRITICAL_SOS</strong>, and student chat input will freeze.
+      </p>
+      <div style="display: flex; gap: 12px;">
+        <button id="cancelSosBtn" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+        <button id="confirmSosProceedBtn" class="btn btn-emergency-sos" style="flex: 1.4; padding: 10px 16px; font-size: 0.9rem;">
+          Yes, Verify Emergency
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SOS EMERGENCY DISPATCH UNMASKED MODAL -->
+  <div class="modal-overlay" id="sosModal">
+    <div class="modal-content" style="max-width: 620px;">
+      <div class="sos-modal-header">
+        <div class="sos-siren-icon">🚨</div>
+        <div class="sos-modal-title">
+          <h2>CRITICAL SOS ACTIVATED</h2>
+          <p>Student Anonymity Lifted &bull; Immediate Campus Dispatch Record</p>
+        </div>
+      </div>
+
+      <div class="sos-modal-body">
+        <div class="sos-data-grid">
+          <div class="sos-data-item">
+            <div class="sos-data-label">Student Name</div>
+            <div class="sos-data-value highlight" id="sosStudentName">Loading...</div>
+          </div>
+
+          <div class="sos-data-item">
+            <div class="sos-data-label">Registration Number</div>
+            <div class="sos-data-value" id="sosRegNo">Loading...</div>
+          </div>
+
+          <div class="sos-data-item" style="grid-column: span 2;">
+            <div class="sos-data-label">Dormitory / Campus Location</div>
+            <div class="sos-data-value highlight" id="sosLocation">Loading...</div>
+          </div>
+
+          <div class="sos-data-item" style="grid-column: span 2;">
+            <div class="sos-data-label">Direct Contact Phone</div>
+            <div class="sos-data-value" id="sosPhone">Loading...</div>
+          </div>
+        </div>
+
+        <div class="dispatch-actions">
+          <a href="#" id="sosCallLink" class="btn-dispatch-call">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+            </svg>
+            Call Student / Room Direct
+          </a>
+          <button id="copySosBtn" class="btn btn-secondary">
+            Copy Dispatch Dossier
+          </button>
+          <button id="closeSosBtn" class="btn btn-secondary">
+            Close &amp; Monitor
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/counselor_dash.js"></script>
+</body>
+</html>
