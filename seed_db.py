@@ -35,7 +35,12 @@ def seed_database():
         db.refresh(session)
         print(f"Created demo ChatSession #{session.id} (Status: {session.status})")
     else:
-        print(f"ChatSession #{session.id} already exists (Status: {session.status})")
+        session.status = SessionStatus.LIVE_BOT
+        # Clear past messages for a clean demo
+        from backend_api.models import Message
+        db.query(Message).filter(Message.session_id == session.id).delete()
+        db.commit()
+        print(f"ChatSession #{session.id} reset to {session.status} (Chat history cleared for fresh demo).")
 
     print(f"Database ready! You can test with Session ID: {session.id}")
     db.close()
