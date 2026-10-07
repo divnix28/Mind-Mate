@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Mind-Mate Confidential Student Chat Interface">
+  <title>Student Chat | Mind-Mate Support</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+</head>
+<body class="chat-layout">
+
+  <!-- Chat Top Header -->
+  <header class="chat-header">
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <a href="index.html" class="btn btn-ghost" style="padding: 6px 10px;" title="Return to Portal">
+        ← Home
+      </a>
+      <div class="chat-persona">
+        <div class="persona-avatar" id="personaAvatar">
+          🤖
+        </div>
+        <div class="persona-details">
+          <div class="persona-name">
+            <span id="personaNameText">Mind-Mate Companion</span>
+            <span id="tierBadge" class="badge badge-tier1">Tier 1: AI Bot</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--text-muted);">
+            <span id="wsStatusDot" class="status-dot connecting"></span>
+            <span id="wsStatusText">Connecting...</span>
+            <span>•</span>
+            <span class="mono" id="sessionIdDisplay" style="cursor: pointer;" title="Click to copy Session ID">ID: --</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <button id="crisisHelpBtn" class="btn btn-danger" style="font-size: 0.78rem; padding: 6px 12px;">
+        🚨 Crisis Contacts
+      </button>
+    </div>
+  </header>
+
+  <!-- Chat Messages Stream -->
+  <main class="chat-messages-container" id="chatMessages">
+    <!-- Confidentiality & PII Notice Banner -->
+    <div class="chat-welcome-notice">
+      <h4>🔒 Confidential & Anonymized Session</h4>
+      <p>
+        Your identity is protected by automated Presidio PII scrubbing. 
+        Personal identifiers (such as your name, hostel room, and contact info) are masked in real time.
+      </p>
+    </div>
+
+    <!-- Initial Welcome Message from Bot -->
+    <div class="message-row bot">
+      <div class="message-bubble">
+        <div class="message-sender-tag">
+          <span>🤖</span>
+          <span>Mind-Mate AI Companion</span>
+        </div>
+        <div class="message-text">
+          Hello! I'm your Mind-Mate support companion. I'm here to listen without judgment. 
+          How are you feeling today? You can share anything on your mind.
+        </div>
+        <span class="message-time" id="initialBotTime">Just now</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Chat Input Wrapper -->
+  <footer class="chat-input-wrapper">
+    <!-- Frozen Emergency Notice (Hidden until SOS) -->
+    <div class="chat-frozen-banner" id="chatFrozenBanner">
+      <span style="font-size: 1.4rem;">🚨</span>
+      <div>
+        <div style="font-weight: 800;">EMERGENCY PROTOCOL ACTIVATED — CHAT LOCKED</div>
+        <div style="font-size: 0.8rem; opacity: 0.9;">
+          Help is on the way. Campus emergency services and medical staff have been alerted to your location. 
+          Please stay right where you are.
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Input Bar -->
+    <form id="chatForm" class="chat-input-bar">
+      <input 
+        type="text" 
+        id="messageInput" 
+        class="chat-input-field" 
+        placeholder="Type what is on your mind... (Enter to send)" 
+        autocomplete="off"
+        disabled
+      >
+      <button type="submit" id="sendBtn" class="btn-send" title="Send Message" disabled>
+        ➤
+      </button>
+    </form>
+    <div style="text-align: center; margin-top: 8px; font-size: 0.72rem; color: var(--text-muted);">
+      Mind-Mate is an AI support assistant and not a replacement for medical diagnosis. In case of crisis, reach out to campus staff.
+    </div>
+  </footer>
+
+  <!-- Crisis Helplines Modal -->
+  <div id="crisisModal" class="modal-overlay">
+    <div class="emergency-modal-card" style="border-color: #ef4444; max-width: 500px;">
+      <div class="modal-emergency-header">
+        <div class="modal-emergency-title">
+          <span>🚨</span>
+          <h2>Campus & National Crisis Helplines</h2>
+        </div>
+        <button id="closeCrisisModal" class="btn btn-ghost" style="color: white; font-size: 1.2rem; padding: 4px 8px;">✕</button>
+      </div>
+      <div class="modal-emergency-body">
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">
+          You are never alone. Professional support is available 24/7 free of charge:
+        </p>
+        <div class="unmasked-data-grid" style="grid-template-columns: 1fr;">
+          <div class="data-field-box highlight">
+            <span class="field-label">National Tele-MANAS Mental Health Helpline</span>
+            <span class="field-value"><a href="tel:14416" style="color: inherit;">📞 14416 (Toll-Free, 24x7)</a></span>
+          </div>
+          <div class="data-field-box">
+            <span class="field-label">Campus Health & Wellness Center</span>
+            <span class="field-value"><a href="tel:0123456789" style="color: inherit;">🏥 Extension 4444</a></span>
+          </div>
+          <div class="data-field-box">
+            <span class="field-label">Campus Security & Emergency Response</span>
+            <span class="field-value"><a href="tel:100" style="color: inherit;">🚨 Extension 100</a></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="dismissCrisisModal" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 1. Session Detection (Never hardcode 1234 fallback!)
+      const urlParams = new URLSearchParams(window.location.search);
+      let sessionId = urlParams.get('session_id') || sessionStorage.getItem('mindmate_session_id');
+
+      const sessionIdDisplay = document.getElementById('sessionIdDisplay');
+      const wsStatusDot = document.getElementById('wsStatusDot');
+      const wsStatusText = document.getElementById('wsStatusText');
+      const chatMessages = document.getElementById('chatMessages');
+      const messageInput = document.getElementById('messageInput');
+      const sendBtn = document.getElementById('sendBtn');
+      const chatForm = document.getElementById('chatForm');
+      const personaAvatar = document.getElementById('personaAvatar');
+      const personaNameText = document.getElementById('personaNameText');
+      const tierBadge = document.getElementById('tierBadge');
+      const chatFrozenBanner = document.getElementById('chatFrozenBanner');
+      const initialBotTime = document.getElementById('initialBotTime');
+
+      if (initialBotTime) {
+        initialBotTime.textContent = formatTime();
+      }
+
+      if (!sessionId) {
+        showToast('No active session ID provided. Redirecting to start page...', 'warning');
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 1500);
+        return;
+      }
+
+      sessionIdDisplay.textContent = `ID: #${sessionId}`;
+      sessionIdDisplay.addEventListener('click', () => {
+        copyToClipboard(sessionId, `Session ID #${sessionId} copied!`);
+      });
+
+      // 2. Dynamic Routing (CRITICAL): Dynamic WebSocket URL using window.location.host
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/student/${encodeURIComponent(sessionId)}`;
+      console.log('Connecting to Student WebSocket:', wsUrl);
+
+      let socket = null;
+      let reconnectAttempts = 0;
+      const MAX_RECONNECT = 5;
+      let isChatFrozen = false;
+
+      function connectWebSocket() {
+        if (isChatFrozen) return;
+
+        wsStatusDot.className = 'status-dot connecting';
+        wsStatusText.textContent = 'Connecting...';
+        messageInput.disabled = true;
+        sendBtn.disabled = true;
+
+        try {
+          socket = new WebSocket(wsUrl);
+
+          socket.onopen = () => {
+            console.log('Student WebSocket Connected successfully');
+            reconnectAttempts = 0;
+            wsStatusDot.className = 'status-dot online';
+            wsStatusText.textContent = 'Connected';
+            if (!isChatFrozen) {
+              messageInput.disabled = false;
+              sendBtn.disabled = false;
+              messageInput.focus();
+            }
+          };
+
+          socket.onmessage = (event) => {
+            handleIncomingMessage(event.data);
+          };
+
+          socket.onerror = (err) => {
+            console.warn('Student WebSocket encountered an error:', err);
+          };
+
+          socket.onclose = (event) => {
+            console.log('Student WebSocket Closed:', event.code, event.reason);
+            wsStatusDot.className = 'status-dot offline';
+            wsStatusText.textContent = 'Disconnected';
+            messageInput.disabled = true;
+            sendBtn.disabled = true;
+
+            // Handle invalid session or closed by server
+            if (event.code === 1008) {
+              appendSystemMessage('Session closed or invalid session ID in database. Please verify your session.');
+              return;
+            }
+
+            // Attempt reconnection if not deliberately frozen
+            if (!isChatFrozen && reconnectAttempts < MAX_RECONNECT) {
+              reconnectAttempts++;
+              const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+              wsStatusText.textContent = `Reconnecting (${reconnectAttempts}/${MAX_RECONNECT})...`;
+              setTimeout(connectWebSocket, delay);
+            }
+          };
+        } catch (e) {
+          console.error('WebSocket connection initialization error:', e);
+          wsStatusDot.className = 'status-dot offline';
+          wsStatusText.textContent = 'Connection Failed';
+        }
+      }
+
+      // 3. User Journey & State Message Processing
+      function handleIncomingMessage(rawData) {
+        let data;
+        try {
+          data = JSON.parse(rawData);
+        } catch (e) {
+          // Plain text fallback
+          data = { sender: 'BOT', content: rawData };
+        }
+
+        const sender = (data.sender || 'BOT').toUpperCase();
+        const content = data.content || '';
+
+        // Phase 1: BOT response
+        if (sender === 'BOT') {
+          appendBotMessage(content);
+          playAudioAlert('chime');
+        }
+        // Phase 2: SYSTEM message (Handoff or Emergency)
+        else if (sender === 'SYSTEM') {
+          appendSystemMessage(content);
+
+          // Check for handoff notice
+          if (content.toLowerCase().includes('routing you to a human counselor')) {
+            tierBadge.className = 'badge badge-tier2';
+            tierBadge.textContent = 'Tier 2: Escalating...';
+            personaNameText.textContent = 'Routing to Campus Counselor...';
+            playAudioAlert('alert');
+          }
+
+          // Phase 4: SOS Emergency Triggered ("Help is on the way...")
+          if (content.toLowerCase().includes('help is on the way')) {
+            freezeChat();
+            playAudioAlert('sos');
+          }
+        }
+        // Phase 3: COUNSELOR response (The Human takeover)
+        else if (sender === 'COUNSELOR') {
+          // Update UI state so student knows a licensed human has joined
+          personaAvatar.textContent = '👩‍⚕️';
+          personaAvatar.classList.add('counselor-mode');
+          personaNameText.textContent = 'Licensed Campus Counselor';
+          tierBadge.className = 'badge badge-tier2';
+          tierBadge.textContent = 'Tier 2: Human Counselor';
+          
+          appendCounselorMessage(content);
+          playAudioAlert('chime');
+        }
+      }
+
+      // Render Messages
+      function appendBotMessage(text) {
+        const row = document.createElement('div');
+        row.className = 'message-row bot';
+        row.innerHTML = `
+          <div class="message-bubble">
+            <div class="message-sender-tag">
+              <span>🤖</span>
+              <span>Mind-Mate AI Companion</span>
+            </div>
+            <div class="message-text">${escapeHTML(text)}</div>
+            <span class="message-time">${formatTime()}</span>
+          </div>
+        `;
+        chatMessages.appendChild(row);
+        scrollToBottom();
+      }
+
+      function appendCounselorMessage(text) {
+        const row = document.createElement('div');
+        row.className = 'message-row counselor';
+        row.innerHTML = `
+          <div class="message-bubble">
+            <div class="message-sender-tag">
+              <span>👩‍⚕️</span>
+              <span>Campus Counselor (Human-in-the-Loop)</span>
+            </div>
+            <div class="message-text">${escapeHTML(text)}</div>
+            <span class="message-time">${formatTime()}</span>
+          </div>
+        `;
+        chatMessages.appendChild(row);
+        scrollToBottom();
+      }
+
+      function appendSystemMessage(text) {
+        const row = document.createElement('div');
+        const isEmergency = text.toLowerCase().includes('help is on the way');
+        row.className = `message-row system ${isEmergency ? 'sos' : ''}`;
+        row.innerHTML = `
+          <div class="system-notice">
+            <span>${isEmergency ? '🚨' : 'ℹ️'}</span>
+            <span>${escapeHTML(text)}</span>
+          </div>
+        `;
+        chatMessages.appendChild(row);
+        scrollToBottom();
+      }
+
+      function appendStudentMessage(text) {
+        const row = document.createElement('div');
+        row.className = 'message-row student';
+        row.innerHTML = `
+          <div class="message-bubble">
+            <div class="message-text">${escapeHTML(text)}</div>
+            <span class="message-time">${formatTime()} ✓</span>
+          </div>
+        `;
+        chatMessages.appendChild(row);
+        scrollToBottom();
+      }
+
+      function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      }
+
+      // Freeze Chat on Phase 4 SOS Emergency
+      function freezeChat() {
+        isChatFrozen = true;
+        chatFrozenBanner.classList.add('visible');
+        messageInput.disabled = true;
+        messageInput.placeholder = 'Chat locked. Emergency help is being dispatched.';
+        sendBtn.disabled = true;
+
+        personaAvatar.textContent = '🚨';
+        personaAvatar.classList.remove('counselor-mode');
+        personaAvatar.classList.add('sos-mode');
+        personaNameText.textContent = 'Emergency Dispatch Active';
+        tierBadge.className = 'badge badge-tier3';
+        tierBadge.textContent = 'Tier 3: Critical SOS';
+        wsStatusDot.className = 'status-dot sos';
+        wsStatusText.textContent = 'SOS Active';
+      }
+
+      // Send Message Event
+      chatForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (isChatFrozen) return;
+
+        const text = messageInput.value.trim();
+        if (!text) return;
+
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
+          showToast('WebSocket is not connected. Reconnecting...', 'warning');
+          return;
+        }
+
+        // Render locally
+        appendStudentMessage(text);
+        messageInput.value = '';
+
+        // Send raw text to backend WebSocket as required
+        socket.send(text);
+      });
+
+      // Crisis Modal handlers
+      const crisisBtn = document.getElementById('crisisHelpBtn');
+      const crisisModal = document.getElementById('crisisModal');
+      const closeCrisis = document.getElementById('closeCrisisModal');
+      const dismissCrisis = document.getElementById('dismissCrisisModal');
+
+      crisisBtn.addEventListener('click', () => crisisModal.classList.add('active'));
+      closeCrisis.addEventListener('click', () => crisisModal.classList.remove('active'));
+      dismissCrisis.addEventListener('click', () => crisisModal.classList.remove('active'));
+
+      // Connect WebSocket
+      connectWebSocket();
+    });
+  </script>
+</body>
+</html>

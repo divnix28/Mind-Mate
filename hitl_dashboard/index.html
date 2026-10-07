@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Mind-Mate: 3-Tier Digital Mental Health Risk Screening System with Real-Time AI and Human-in-the-Loop Triage">
+  <title>Mind-Mate | Digital Mental Health Risk Screening System</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧠</text></svg>">
+</head>
+<body>
+  <!-- Global Navigation Header -->
+  <header class="app-header">
+    <a href="index.html" class="brand">
+      <div class="brand-logo">🧠</div>
+      <div>
+        <span class="brand-title">Mind-Mate</span>
+        <span class="brand-subtitle">Campus Mental Health & HITL Triage</span>
+      </div>
+    </a>
+    <div class="header-actions">
+      <div class="badge badge-tier1" id="systemStatusBadge">
+        <span class="status-dot online"></span> System Online
+      </div>
+      <a href="counselor_dash.html" class="btn btn-secondary" id="navCounselorBtn">
+        👩‍⚕️ Counselor Portal
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Landing Container -->
+  <main class="landing-container">
+    <!-- Hero Header -->
+    <section class="hero-section">
+      <div class="hero-badge">
+        <span>🛡️ 3-Tier Multi-Agent Safety Architecture</span>
+      </div>
+      <h1 class="hero-title">A Confidential Space for Student Well-Being</h1>
+      <p class="hero-desc">
+        Mind-Mate combines empathetic real-time AI companionship with an automated Human-in-the-Loop (HITL) 
+        safety net to provide 24/7 campus mental health triage while strictly preserving student privacy.
+      </p>
+    </section>
+
+    <!-- Dual Portal Gateway Cards -->
+    <section class="portal-grid">
+      <!-- Card 1: Student Chat Portal -->
+      <article class="portal-card student-portal">
+        <div>
+          <div class="portal-icon-wrap">💬</div>
+          <h2 class="portal-card-title">Student Support Portal</h2>
+          <p class="portal-card-desc">
+            Connect directly with our real-time AI companion. Chat freely about academic stress, anxiety, 
+            or personal struggles. Your identity is automatically protected via real-time PII anonymization.
+          </p>
+          <ul class="feature-list">
+            <li><i>✓</i> <strong>100% Anonymous:</strong> Presidio PII scrubbing redacts names, hostels, and contacts</li>
+            <li><i>✓</i> <strong>Tier 1 Conversational AI:</strong> Immediate, empathetic, non-judgmental dialogue</li>
+            <li><i>✓</i> <strong>Seamless Counselor Escalation:</strong> Automated handoff if elevated risk is detected</li>
+          </ul>
+        </div>
+        <div>
+          <button id="btnStartChat" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 1rem;">
+            <span>🚀 Start Confidential Chat</span>
+          </button>
+          <p id="sessionInitStatus" style="font-size: 0.78rem; color: var(--text-muted); text-align: center; margin-top: 10px; min-height: 18px;"></p>
+        </div>
+      </article>
+
+      <!-- Card 2: Counselor Dashboard Portal -->
+      <article class="portal-card counselor-portal">
+        <div>
+          <div class="portal-icon-wrap">🩺</div>
+          <h2 class="portal-card-title">Counselor & HITL Console</h2>
+          <p class="portal-card-desc">
+            Dedicated workspace for certified campus counselors and mental health professionals. Monitor incoming 
+            escalations, join live chats with scrubbed transcripts, and activate emergency dispatch protocols.
+          </p>
+          <ul class="feature-list">
+            <li><i>✓</i> <strong>Live Triage Queue:</strong> Instant alerts for Tier 2 (Moderate) risk escalations</li>
+            <li><i>✓</i> <strong>Scrubbed Transcript Feed:</strong> Review student messages with preserved privacy</li>
+            <li><i>✓</i> <strong>Verified Break-Glass SOS:</strong> Cryptographically unmask PII for emergency response</li>
+          </ul>
+        </div>
+        <div>
+          <a href="counselor_dash.html" class="btn btn-secondary" style="width: 100%; padding: 14px; font-size: 1rem; border-color: var(--indigo-500);">
+            <span>👩‍⚕️ Access Counselor Dashboard</span>
+          </a>
+          <p style="font-size: 0.78rem; color: var(--text-muted); text-align: center; margin-top: 10px;">
+            Authorized Campus Mental Health Staff Only
+          </p>
+        </div>
+      </article>
+    </section>
+
+    <!-- Campus Emergency Helplines Bar -->
+    <section class="campus-helpline-bar">
+      <div class="helpline-info">
+        <span class="helpline-icon">🚨</span>
+        <div>
+          <div class="helpline-title">Campus 24/7 Crisis Intervention Helplines</div>
+          <div class="helpline-sub">If you or someone you know is in immediate life-threatening danger, call directly:</div>
+        </div>
+      </div>
+      <div class="helpline-numbers">
+        <div class="helpline-pill">📞 Tele-MANAS: 14416</div>
+        <div class="helpline-pill">🏥 Campus Clinic: Ext. 4444</div>
+        <div class="helpline-pill">🚨 Campus Emergency: Ext. 100</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Manual Session Entry Fallback Modal -->
+  <div id="sessionModal" class="modal-overlay">
+    <div class="emergency-modal-card" style="border-color: var(--indigo-500); box-shadow: var(--shadow-lg);">
+      <div class="modal-emergency-header" style="background: linear-gradient(135deg, var(--indigo-600), #4338ca);">
+        <div class="modal-emergency-title">
+          <span>💬</span>
+          <h2>Connect to Chat Session</h2>
+        </div>
+        <button id="closeSessionModal" class="btn btn-ghost" style="color: white; font-size: 1.2rem; padding: 4px 8px;">✕</button>
+      </div>
+      <div class="modal-emergency-body">
+        <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
+          The backend session initialization endpoint is currently being mounted or requires a valid database session ID. 
+          Please enter your assigned Session ID to join the room:
+        </p>
+        <div class="data-field-box">
+          <label class="field-label" for="manualSessionIdInput">Database Session ID</label>
+          <input type="number" id="manualSessionIdInput" class="manual-input" style="font-size: 1.1rem; padding: 10px;" placeholder="e.g. 1" min="1" autofocus>
+        </div>
+        <p style="font-size: 0.78rem; color: var(--text-muted);">
+          Note: In accordance with our security protocol, sessions must correspond to an active session in the database.
+        </p>
+      </div>
+      <div class="modal-actions">
+        <button id="cancelModalBtn" class="btn btn-secondary">Cancel</button>
+        <button id="submitSessionBtn" class="btn btn-primary">Join Room</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const startBtn = document.getElementById('btnStartChat');
+      const statusText = document.getElementById('sessionInitStatus');
+      const modal = document.getElementById('sessionModal');
+      const closeModal = document.getElementById('closeSessionModal');
+      const cancelModal = document.getElementById('cancelModalBtn');
+      const submitSession = document.getElementById('submitSessionBtn');
+      const manualInput = document.getElementById('manualSessionIdInput');
+
+      // Check backend health
+      fetch('/api/v1/health')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.status) {
+            document.getElementById('systemStatusBadge').innerHTML = '<span class="status-dot online"></span> API Active';
+          }
+        })
+        .catch(() => {
+          document.getElementById('systemStatusBadge').innerHTML = '<span class="status-dot connecting"></span> Standalone Mode';
+        });
+
+      // Secure Session Initiation: Click "Start Chat" triggers a REST call to backend
+      startBtn.addEventListener('click', async () => {
+        startBtn.disabled = true;
+        startBtn.innerHTML = '<span>⏳ Requesting Session...</span>';
+        statusText.textContent = 'Contacting backend to generate a secure session...';
+
+        try {
+          // Attempt standard REST endpoints for session initiation
+          let response = await fetch('/api/v1/sessions/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source: 'web_portal', timestamp: new Date().toISOString() })
+          }).catch(() => null);
+
+          // If the endpoint isn't mounted yet, attempt fallback route /api/v1/sessions
+          if (!response || !response.ok) {
+            response = await fetch('/api/v1/sessions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            }).catch(() => null);
+          }
+
+          if (response && response.ok) {
+            const data = await response.json();
+            const sessionId = data.session_id || data.id;
+            if (sessionId) {
+              sessionStorage.setItem('mindmate_session_id', sessionId);
+              window.location.href = `student_chat.html?session_id=${encodeURIComponent(sessionId)}`;
+              return;
+            }
+          }
+
+          // If backend REST endpoint is not yet mounted (e.g. backend team still implementing),
+          // prompt user for legitimate DB session ID rather than hardcoding fake fallback (1234)
+          statusText.textContent = 'Please specify your assigned database session ID.';
+          modal.classList.add('active');
+          manualInput.focus();
+
+        } catch (err) {
+          console.warn('Session start REST call error:', err);
+          modal.classList.add('active');
+        } finally {
+          startBtn.disabled = false;
+          startBtn.innerHTML = '<span>🚀 Start Confidential Chat</span>';
+        }
+      });
+
+      // Modal handling
+      const hideModal = () => {
+        modal.classList.remove('active');
+        statusText.textContent = '';
+      };
+
+      closeModal.addEventListener('click', hideModal);
+      cancelModal.addEventListener('click', hideModal);
+
+      submitSession.addEventListener('click', () => {
+        const val = manualInput.value.trim();
+        if (!val || isNaN(val) || parseInt(val) <= 0) {
+          showToast('Please enter a valid numeric session ID.', 'warning');
+          manualInput.focus();
+          return;
+        }
+        sessionStorage.setItem('mindmate_session_id', val);
+        window.location.href = `student_chat.html?session_id=${encodeURIComponent(val)}`;
+      });
+
+      manualInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          submitSession.click();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
