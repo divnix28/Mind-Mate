@@ -44,7 +44,7 @@
         <div style="font-size: 2rem; margin-bottom: 8px;">⏳</div>
         <div>No pending triage escalations in queue.</div>
         <div style="font-size: 0.75rem; margin-top: 4px; color: var(--text-muted);">
-          When a student's conversation triggers Tier 2 risk, it will automatically populate here.
+          When a student's conversation triggers Tier 2 risk or requests human support, it will automatically populate here.
         </div>
       </div>
     </div>
@@ -52,7 +52,7 @@
     <!-- Manual Session ID Connector -->
     <div class="sidebar-footer">
       <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase;">
-        Monitor / Join Session by ID
+        Monitor Escalated Session by ID
       </div>
       <div class="manual-connect-box">
         <input 
@@ -77,22 +77,18 @@
     <!-- Empty State (When no session is active) -->
     <div class="console-empty-state" id="consoleEmptyState">
       <div class="console-empty-icon">🛡️</div>
-      <h2 class="console-empty-title">Select a Session to Begin Intervention</h2>
+      <h2 class="console-empty-title">Select an Escalated Session to Begin Intervention</h2>
       <p class="console-empty-desc">
-        Click <strong>"Join Chat"</strong> on any session in the triage queue on the left, 
-        or enter a valid database Session ID below to establish a real-time secure WebSocket connection.
+        Click <strong>"Join Chat"</strong> on any session in the triage queue on the left. 
+        <br><br>
+        <span style="font-size: 0.85rem; color: var(--teal-400);">🔒 <strong>Confidentiality Notice:</strong> Private AI companion sessions (Tier 1) are strictly confidential and protected from counselor monitoring until escalated by risk triage or student consent.</span>
       </p>
-      <div style="margin-top: 10px; display: flex; gap: 10px;">
-        <button id="emptyStateQuickJoin1" class="btn btn-secondary" style="font-size: 0.8rem;">
-          Quick Connect to Session #1
-        </button>
-      </div>
     </div>
 
     <!-- Active Session Console (Hidden until session joined) -->
     <div id="activeSessionWorkspace" style="display: none; flex-direction: column; height: 100%; width: 100%;">
       
-      <!-- Top Action Bar with Massive SOS Break-Glass Button -->
+      <!-- Top Action Bar with Resolve and SOS Break-Glass Button -->
       <header class="console-header">
         <div class="active-session-meta">
           <div class="student-avatar-anon">👤</div>
@@ -110,7 +106,12 @@
           </div>
         </div>
 
-        <div class="console-actions">
+        <div class="console-actions" style="display: flex; gap: 10px; align-items: center;">
+          <!-- Resolve Session Button -->
+          <button id="btnResolveSession" class="btn btn-secondary" style="font-size: 0.78rem; padding: 8px 14px; border-color: var(--teal-500); color: var(--teal-300);" title="Mark intervention complete and return student to AI companion">
+            <span>✅ Resolve &amp; Return to AI</span>
+          </button>
+
           <!-- THE MASSIVE RED SOS BREAK-GLASS BUTTON -->
           <button id="btnSosUnmask" class="btn-break-glass" title="Break-Glass: Unmask Student PII and Dispatch Campus Emergency">
             <span class="sos-icon">🚨</span>
@@ -183,7 +184,6 @@
        ========================================================================= -->
   <div id="sosModal" class="modal-overlay">
     <div class="emergency-modal-card">
-      <!-- Modal Header -->
       <div class="modal-emergency-header">
         <div class="modal-emergency-title">
           <span style="font-size: 1.6rem; animation: pulse-sos-icon 0.8s infinite;">🚨</span>
@@ -195,7 +195,6 @@
         <div class="modal-emergency-badge">EMERGENCY PROTOCOL</div>
       </div>
 
-      <!-- Modal Body -->
       <div class="modal-emergency-body">
         <div class="emergency-banner-callout">
           <span style="font-size: 1.4rem;">⚠️</span>
@@ -207,7 +206,6 @@
           </div>
         </div>
 
-        <!-- Unmasked Data Grid -->
         <div class="unmasked-data-grid">
           <div class="data-field-box highlight">
             <span class="field-label">Student Full Name</span>
@@ -235,7 +233,6 @@
         </div>
       </div>
 
-      <!-- Modal Actions -->
       <div class="modal-actions">
         <button id="copyDispatchBtn" class="btn btn-secondary">
           📋 Copy Dispatch Details
@@ -274,6 +271,7 @@
       const composerForm = document.getElementById('composerForm');
       const counselorInput = document.getElementById('counselorInput');
       const btnSosUnmask = document.getElementById('btnSosUnmask');
+      const btnResolveSession = document.getElementById('btnResolveSession');
 
       // Modal elements
       const sosModal = document.getElementById('sosModal');
@@ -288,7 +286,6 @@
       // Manual join elements
       const manualJoinInput = document.getElementById('manualJoinInput');
       const manualJoinBtn = document.getElementById('manualJoinBtn');
-      const emptyStateQuickJoin1 = document.getElementById('emptyStateQuickJoin1');
 
       // Filter buttons
       const filterAwaiting = document.getElementById('filterAwaiting');
@@ -306,29 +303,37 @@
         });
       });
 
-      // Initialize initial queue session if passed in URL query param
+      // Fetch live escalation queue from backend API
+      async function fetchTriageQueue() {
+        try {
+          const res = await fetch('/api/v1/hitl/queue');
+          if (res.ok) {
+            const data = await res.json();
+            sessionsMap.clear();
+            data.forEach(item => {
+              sessionsMap.set(item.id, {
+                id: item.id,
+                status: item.status,
+                preview: item.preview || 'Escalated Session',
+                timestamp: item.created_at ? new Date(item.created_at) : new Date()
+              });
+            });
+            renderQueue();
+          }
+        } catch (e) {
+          console.warn('Queue fetch error:', e);
+        }
+      }
+
+      // Initial fetch + 4s polling
+      fetchTriageQueue();
+      setInterval(fetchTriageQueue, 4000);
+
+      // Check if session_id is in URL
       const urlParams = new URLSearchParams(window.location.search);
       const initialParamId = urlParams.get('session_id');
       if (initialParamId) {
-        addOrUpdateSessionInQueue(parseInt(initialParamId), 'AWAITING_COUNSELOR', 'Tier 2 Escalation');
         selectAndJoinSession(parseInt(initialParamId));
-      } else {
-        // Pre-seed an awaiting session entry in the triage queue so the counselor can test out-of-the-box
-        addOrUpdateSessionInQueue(1, 'AWAITING_COUNSELOR', 'Flagged by Groq LLM Triage Agent');
-      }
-
-      // Add / Update Session in Queue State
-      function addOrUpdateSessionInQueue(id, status = 'AWAITING_COUNSELOR', preview = 'Flagged session') {
-        const existing = sessionsMap.get(id) || {
-          id: id,
-          status: status,
-          preview: preview,
-          timestamp: new Date()
-        };
-        existing.status = status;
-        existing.preview = preview;
-        sessionsMap.set(id, existing);
-        renderQueue();
       }
 
       // Render Queue UI
@@ -427,15 +432,32 @@
         renderQueue();
       });
 
-      // Quick join / Manual join
-      manualJoinBtn.addEventListener('click', () => {
+      // Manual join by ID
+      manualJoinBtn.addEventListener('click', async () => {
         const val = manualJoinInput.value.trim();
         if (!val || isNaN(val) || parseInt(val) <= 0) {
           showToast('Please enter a valid numeric session ID.', 'warning');
           return;
         }
         const sid = parseInt(val);
-        addOrUpdateSessionInQueue(sid, 'AWAITING_COUNSELOR', 'Manually entered session');
+
+        // Pre-check session privacy before connecting
+        try {
+          const res = await fetch(`/api/v1/sessions/${sid}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === 'LIVE_BOT') {
+              showToast(`⛔ Access Denied: Session #${sid} is in confidential AI companion mode (Tier 1). Counselors cannot join unescalated chats.`, 'danger', 8000);
+              return;
+            }
+          } else if (res.status === 404) {
+            showToast(`Session #${sid} does not exist in database.`, 'warning');
+            return;
+          }
+        } catch (e) {
+          console.warn('Pre-check error:', e);
+        }
+
         selectAndJoinSession(sid);
       });
 
@@ -443,15 +465,10 @@
         if (e.key === 'Enter') manualJoinBtn.click();
       });
 
-      emptyStateQuickJoin1.addEventListener('click', () => {
-        addOrUpdateSessionInQueue(1, 'AWAITING_COUNSELOR', 'Demo Flagged Session #1');
-        selectAndJoinSession(1);
-      });
-
       // =========================================================================
       // DYNAMIC COUNSELOR WEBSOCKET CONNECTION
       // =========================================================================
-      function selectAndJoinSession(sessionId) {
+      async function selectAndJoinSession(sessionId) {
         if (currentSessionId === sessionId && counselorSocket && counselorSocket.readyState === WebSocket.OPEN) {
           return;
         }
@@ -466,7 +483,7 @@
         activeStatusBadge.className = 'badge badge-tier2';
         activeStatusBadge.textContent = 'AWAITING_COUNSELOR';
 
-        // Clear messages
+        // Clear messages and load banner
         consoleMessages.innerHTML = `
           <div class="privacy-banner-strip">
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -490,7 +507,25 @@
           counselorSocket.close();
         }
 
-        // Dynamic origin detection for WebSocket (CRITICAL REQUIREMENT)
+        // Fetch past messages to display in console
+        try {
+          const historyRes = await fetch(`/api/v1/sessions/${sessionId}/history`);
+          if (historyRes.ok) {
+            const historyData = await historyRes.json();
+            if (historyData.messages && historyData.messages.length > 0) {
+              historyData.messages.forEach(msg => {
+                if (msg.sender === 'STUDENT') {
+                  appendStudentScrubbedMessage(msg.content, msg.timestamp);
+                } else if (msg.sender === 'COUNSELOR') {
+                  appendCounselorMessage(msg.content, msg.timestamp);
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Could not load session history for counselor:', e);
+        }
+
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${wsProtocol}//${window.location.host}/ws/counselor/${sessionId}`;
         console.log('Counselor connecting to:', wsUrl);
@@ -509,9 +544,9 @@
 
             activeStatusBadge.className = 'badge badge-info';
             activeStatusBadge.textContent = 'LIVE_COUNSELOR';
-            addOrUpdateSessionInQueue(sessionId, 'LIVE_COUNSELOR', 'Counselor active');
 
             counselorInput.focus();
+            fetchTriageQueue();
           };
 
           counselorSocket.onmessage = (event) => {
@@ -526,9 +561,6 @@
             console.log('Counselor WebSocket closed:', event.code, event.reason);
             counselorWsDot.className = 'status-dot offline';
             counselorWsText.textContent = 'Disconnected';
-            if (event.code === 1008) {
-              appendSystemConsoleMessage('Session closed: Chat session ID not found in database.');
-            }
           };
         } catch (e) {
           console.error('Error creating Counselor WebSocket:', e);
@@ -546,12 +578,26 @@
           data = { sender: 'STUDENT', content: rawData };
         }
 
+        // Privacy Rejection Check
+        if (data.event === 'ACCESS_DENIED') {
+          showToast(`⛔ ${data.detail || 'Access Denied: Private AI companion session.'}`, 'danger', 9000);
+          appendSystemConsoleMessage(`⛔ ${data.detail || 'Access Denied: Unescalated confidential session.'}`);
+          counselorWsDot.className = 'status-dot offline';
+          counselorWsText.textContent = 'Access Denied';
+          setTimeout(() => {
+            activeSessionWorkspace.style.display = 'none';
+            consoleEmptyState.style.display = 'flex';
+            currentSessionId = null;
+          }, 2000);
+          return;
+        }
+
         // Moderate risk notification event: {"event": "NEW_MODERATE_RISK"}
         if (data.event === 'NEW_MODERATE_RISK') {
           playAudioAlert('alert');
-          showToast(`⚠️ Session #${currentSessionId}: New Moderate Risk Escalation!`, 'warning', 6000);
-          appendSystemConsoleMessage('⚠️ Automated LLM Alert: Moderate risk detected in student conversation. Counselor intervention requested.');
-          addOrUpdateSessionInQueue(currentSessionId, 'AWAITING_COUNSELOR', '⚠️ Moderate Risk Detected');
+          showToast(`⚠️ Session #${data.session_id || currentSessionId}: Triage Escalation Alert!`, 'warning', 6000);
+          appendSystemConsoleMessage('⚠️ Automated Alert: Risk detected in student conversation. Counselor intervention requested.');
+          fetchTriageQueue();
           return;
         }
 
@@ -559,17 +605,16 @@
         if (data.sender === 'STUDENT') {
           appendStudentScrubbedMessage(data.content);
           playAudioAlert('chime');
-          addOrUpdateSessionInQueue(currentSessionId, 'LIVE_COUNSELOR', data.content);
+          fetchTriageQueue();
         }
       }
 
       // Append scrubbed student message with high-visibility PII tags
-      function appendStudentScrubbedMessage(text) {
+      function appendStudentScrubbedMessage(text, timestamp) {
         const row = document.createElement('div');
         row.className = 'message-row student';
-        row.style.alignItems = 'flex-start'; // Render student on left from counselor's perspective
+        row.style.alignItems = 'flex-start';
         
-        // Use highlightPIITags from common.js to highlight [HOSTEL_BLOCK], [PERSON], etc.
         const renderedHtml = highlightPIITags(text);
 
         row.innerHTML = `
@@ -579,7 +624,7 @@
               <span>Anonymous Student (PII Scrubbed)</span>
             </div>
             <div class="message-text">${renderedHtml}</div>
-            <span class="message-time" style="color: var(--text-muted); text-align: left;">${formatTime()}</span>
+            <span class="message-time" style="color: var(--text-muted); text-align: left;">${formatTime(timestamp)}</span>
           </div>
         `;
         consoleMessages.appendChild(row);
@@ -587,10 +632,10 @@
       }
 
       // Append counselor message (locally sent)
-      function appendCounselorMessage(text) {
+      function appendCounselorMessage(text, timestamp) {
         const row = document.createElement('div');
         row.className = 'message-row counselor';
-        row.style.alignItems = 'flex-end'; // Counselor messages on right
+        row.style.alignItems = 'flex-end';
 
         row.innerHTML = `
           <div class="message-bubble" style="background: linear-gradient(135deg, var(--indigo-600), #4338ca); color: white; border-bottom-right-radius: var(--radius-sm);">
@@ -599,7 +644,7 @@
               <span>🩺</span>
             </div>
             <div class="message-text">${escapeHTML(text)}</div>
-            <span class="message-time" style="color: rgba(255, 255, 255, 0.65);">${formatTime()} ✓</span>
+            <span class="message-time" style="color: rgba(255, 255, 255, 0.65);">${formatTime(timestamp)} ✓</span>
           </div>
         `;
         consoleMessages.appendChild(row);
@@ -638,8 +683,36 @@
         appendCounselorMessage(text);
         counselorInput.value = '';
 
-        // Send raw text to backend WebSocket as expected by backend_api/main.py:132
+        // Send to backend
         counselorSocket.send(text);
+      });
+
+      // =========================================================================
+      // RESOLVE SESSION & RETURN TO AI COMPANION
+      // =========================================================================
+      btnResolveSession.addEventListener('click', async () => {
+        if (!currentSessionId) return;
+
+        const confirmed = confirm(`Are you sure you want to mark Session #${currentSessionId} as resolved and return the student to AI companion mode?`);
+        if (!confirmed) return;
+
+        try {
+          const res = await fetch(`/api/v1/hitl/resolve/${currentSessionId}`, { method: 'POST' });
+          if (res.ok) {
+            showToast(`Session #${currentSessionId} marked resolved. Returned to AI companion.`, 'success');
+            appendSystemConsoleMessage('✅ Session marked resolved and student safely returned to AI companion mode.');
+            if (counselorSocket) {
+              counselorSocket.close();
+              counselorSocket = null;
+            }
+            activeSessionWorkspace.style.display = 'none';
+            consoleEmptyState.style.display = 'flex';
+            currentSessionId = null;
+            fetchTriageQueue();
+          }
+        } catch (e) {
+          showToast('Error resolving session.', 'danger');
+        }
       });
 
       // =========================================================================
@@ -669,7 +742,6 @@
         btnSosUnmask.innerHTML = '<span>⏳ UNMASKING & DISPATCHING...</span>';
 
         try {
-          // Dynamic relative path as specified in requirement: /api/v1/hitl/sos/unmask/${sessionId}
           const response = await fetch(`/api/v1/hitl/sos/unmask/${encodeURIComponent(currentSessionId)}`, {
             method: 'POST',
             headers: {
@@ -685,10 +757,8 @@
           const data = await response.json();
           cachedDispatchData = data;
 
-          // Sound emergency audio siren
           playAudioAlert('sos');
 
-          // Update unmasked data in modal
           unmaskedName.textContent = data.student_name || 'N/A';
           unmaskedRegNo.textContent = data.reg_no || 'N/A';
           unmaskedLocation.textContent = data.location || 'N/A';
@@ -697,16 +767,14 @@
             callSecurityBtn.href = `tel:${data.phone}`;
           }
 
-          // Update UI state to CRITICAL_SOS
           activeStatusBadge.className = 'badge badge-tier3';
           activeStatusBadge.textContent = 'CRITICAL_SOS';
-          addOrUpdateSessionInQueue(currentSessionId, 'CRITICAL_SOS', '🚨 CRITICAL SOS DISPATCHED');
 
           appendSystemConsoleMessage('🚨 CRITICAL SOS PROTOCOL ACTIVATED: Student PII has been unmasked for physical dispatch.');
 
-          // Show Emergency Modal
           sosModal.classList.add('active');
           showToast('🚨 CRITICAL SOS: Student PII unmasked successfully!', 'danger', 8000);
+          fetchTriageQueue();
 
         } catch (err) {
           console.error('Failed to trigger SOS unmask:', err);

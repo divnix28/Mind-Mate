@@ -35,7 +35,16 @@
       </div>
     </div>
 
-    <div class="header-actions">
+    <div class="header-actions" style="display: flex; align-items: center; gap: 8px;">
+      <button id="newChatBtn" class="btn btn-secondary" style="font-size: 0.78rem; padding: 6px 12px;" title="Start a fresh confidential AI conversation">
+        ✨ New Chat
+      </button>
+      <button id="requestCounselorBtn" class="btn btn-secondary" style="font-size: 0.78rem; padding: 6px 12px; border-color: var(--teal-500); color: var(--teal-400);" title="Request a licensed campus counselor">
+        👩‍⚕️ Talk to Counselor
+      </button>
+      <button id="returnToBotBtn" class="btn btn-secondary" style="font-size: 0.78rem; padding: 6px 12px; display: none; border-color: var(--indigo-500); color: var(--indigo-300);" title="Return to AI Companion">
+        🤖 Back to AI Bot
+      </button>
       <button id="crisisHelpBtn" class="btn btn-danger" style="font-size: 0.78rem; padding: 6px 12px;">
         🚨 Crisis Contacts
       </button>
@@ -53,18 +62,20 @@
       </p>
     </div>
 
-    <!-- Initial Welcome Message from Bot -->
-    <div class="message-row bot">
-      <div class="message-bubble">
-        <div class="message-sender-tag">
-          <span>🤖</span>
-          <span>Mind-Mate AI Companion</span>
+    <!-- Messages Container (populated dynamically) -->
+    <div id="messagesList">
+      <div class="message-row bot" id="defaultWelcomeRow">
+        <div class="message-bubble">
+          <div class="message-sender-tag">
+            <span>🤖</span>
+            <span>Mind-Mate AI Companion</span>
+          </div>
+          <div class="message-text">
+            Hello! I'm your Mind-Mate support companion. I'm here to listen without judgment. 
+            How are you feeling today? You can share anything on your mind.
+          </div>
+          <span class="message-time" id="initialBotTime">Just now</span>
         </div>
-        <div class="message-text">
-          Hello! I'm your Mind-Mate support companion. I'm here to listen without judgment. 
-          How are you feeling today? You can share anything on your mind.
-        </div>
-        <span class="message-time" id="initialBotTime">Just now</span>
       </div>
     </div>
   </main>
@@ -139,8 +150,8 @@
 
   <script src="js/common.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      // 1. Session Detection (Never hardcode 1234 fallback!)
+    document.addEventListener('DOMContentLoaded', async () => {
+      // 1. Session Detection
       const urlParams = new URLSearchParams(window.location.search);
       let sessionId = urlParams.get('session_id') || sessionStorage.getItem('mindmate_session_id');
 
@@ -148,6 +159,8 @@
       const wsStatusDot = document.getElementById('wsStatusDot');
       const wsStatusText = document.getElementById('wsStatusText');
       const chatMessages = document.getElementById('chatMessages');
+      const messagesList = document.getElementById('messagesList');
+      const defaultWelcomeRow = document.getElementById('defaultWelcomeRow');
       const messageInput = document.getElementById('messageInput');
       const sendBtn = document.getElementById('sendBtn');
       const chatForm = document.getElementById('chatForm');
@@ -155,34 +168,113 @@
       const personaNameText = document.getElementById('personaNameText');
       const tierBadge = document.getElementById('tierBadge');
       const chatFrozenBanner = document.getElementById('chatFrozenBanner');
-      const initialBotTime = document.getElementById('initialBotTime');
+      const requestCounselorBtn = document.getElementById('requestCounselorBtn');
+      const returnToBotBtn = document.getElementById('returnToBotBtn');
+      const newChatBtn = document.getElementById('newChatBtn');
 
-      if (initialBotTime) {
-        initialBotTime.textContent = formatTime();
-      }
-
+      // If no session ID is found, automatically create a fresh private session
       if (!sessionId) {
-        showToast('No active session ID provided. Redirecting to start page...', 'warning');
-        setTimeout(() => {
+        try {
+          const res = await fetch('/api/v1/sessions/start', { method: 'POST' });
+          if (res.ok) {
+            const data = await res.json();
+            sessionId = data.session_id;
+            sessionStorage.setItem('mindmate_session_id', sessionId);
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('session_id', sessionId);
+            window.history.replaceState({}, '', newUrl.toString());
+          } else {
+            showToast('Unable to initialize session. Redirecting...', 'warning');
+            setTimeout(() => window.location.href = 'index.html', 1200);
+            return;
+          }
+        } catch (e) {
           window.location.href = 'index.html';
-        }, 1500);
-        return;
+          return;
+        }
       }
 
+      sessionStorage.setItem('mindmate_session_id', sessionId);
       sessionIdDisplay.textContent = `ID: #${sessionId}`;
       sessionIdDisplay.addEventListener('click', () => {
         copyToClipboard(sessionId, `Session ID #${sessionId} copied!`);
       });
 
-      // 2. Dynamic Routing (CRITICAL): Dynamic WebSocket URL using window.location.host
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.host}/ws/student/${encodeURIComponent(sessionId)}`;
-      console.log('Connecting to Student WebSocket:', wsUrl);
-
+      let currentStatus = 'LIVE_BOT';
       let socket = null;
       let reconnectAttempts = 0;
       const MAX_RECONNECT = 5;
       let isChatFrozen = false;
+
+      // Update UI Persona based on status
+      function syncPersonaUI(status) {
+        currentStatus = status;
+
+        if (status === 'LIVE_BOT') {
+          personaAvatar.textContent = '🤖';
+          personaAvatar.className = 'persona-avatar';
+          personaNameText.textContent = 'Mind-Mate Companion';
+          tierBadge.className = 'badge badge-tier1';
+          tierBadge.textContent = 'Tier 1: AI Bot';
+          requestCounselorBtn.style.display = 'inline-flex';
+          returnToBotBtn.style.display = 'none';
+        } else if (status === 'AWAITING_COUNSELOR') {
+          personaAvatar.textContent = '⏳';
+          personaAvatar.className = 'persona-avatar';
+          personaNameText.textContent = 'Routing to Campus Counselor...';
+          tierBadge.className = 'badge badge-tier2';
+          tierBadge.textContent = 'Tier 2: Escalating...';
+          requestCounselorBtn.style.display = 'none';
+          returnToBotBtn.style.display = 'inline-flex';
+        } else if (status === 'LIVE_COUNSELOR') {
+          personaAvatar.textContent = '👩‍⚕️';
+          personaAvatar.className = 'persona-avatar counselor-mode';
+          personaNameText.textContent = 'Licensed Campus Counselor';
+          tierBadge.className = 'badge badge-tier2';
+          tierBadge.textContent = 'Tier 2: Human Counselor';
+          requestCounselorBtn.style.display = 'none';
+          returnToBotBtn.style.display = 'inline-flex';
+        } else if (status === 'CRITICAL_SOS') {
+          freezeChat();
+        }
+      }
+
+      // 2. Fetch Session History on Load / Refresh
+      async function loadSessionHistory() {
+        try {
+          const res = await fetch(`/api/v1/sessions/${encodeURIComponent(sessionId)}/history`);
+          if (res.ok) {
+            const data = await res.json();
+            syncPersonaUI(data.status);
+
+            if (data.messages && data.messages.length > 0) {
+              // Hide default welcome row and render history
+              if (defaultWelcomeRow) defaultWelcomeRow.style.display = 'none';
+              messagesList.innerHTML = '';
+              data.messages.forEach(msg => {
+                const sender = (msg.sender || '').toUpperCase();
+                if (sender === 'STUDENT') {
+                  appendStudentMessage(msg.content, msg.timestamp);
+                } else if (sender === 'BOT') {
+                  appendBotMessage(msg.content, msg.timestamp);
+                } else if (sender === 'COUNSELOR') {
+                  appendCounselorMessage(msg.content, msg.timestamp);
+                }
+              });
+              scrollToBottom();
+            }
+          }
+        } catch (e) {
+          console.warn('Could not load session history:', e);
+        }
+      }
+
+      await loadSessionHistory();
+
+      // 3. Connect WebSocket
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/student/${encodeURIComponent(sessionId)}`;
+      console.log('Connecting to Student WebSocket:', wsUrl);
 
       function connectWebSocket() {
         if (isChatFrozen) return;
@@ -212,7 +304,7 @@
           };
 
           socket.onerror = (err) => {
-            console.warn('Student WebSocket encountered an error:', err);
+            console.warn('Student WebSocket error:', err);
           };
 
           socket.onclose = (event) => {
@@ -222,79 +314,77 @@
             messageInput.disabled = true;
             sendBtn.disabled = true;
 
-            // Handle invalid session or closed by server
             if (event.code === 1008) {
-              appendSystemMessage('Session closed or invalid session ID in database. Please verify your session.');
+              appendSystemMessage('Session closed by server. Please verify your session.');
               return;
             }
 
-            // Attempt reconnection if not deliberately frozen
             if (!isChatFrozen && reconnectAttempts < MAX_RECONNECT) {
               reconnectAttempts++;
-              const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+              const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 8000);
               wsStatusText.textContent = `Reconnecting (${reconnectAttempts}/${MAX_RECONNECT})...`;
               setTimeout(connectWebSocket, delay);
             }
           };
         } catch (e) {
-          console.error('WebSocket connection initialization error:', e);
+          console.error('WebSocket connection error:', e);
           wsStatusDot.className = 'status-dot offline';
           wsStatusText.textContent = 'Connection Failed';
         }
       }
 
-      // 3. User Journey & State Message Processing
+      // Handle Incoming WebSocket Messages
       function handleIncomingMessage(rawData) {
         let data;
         try {
           data = JSON.parse(rawData);
         } catch (e) {
-          // Plain text fallback
           data = { sender: 'BOT', content: rawData };
+        }
+
+        if (data.event === 'SESSION_STATE') {
+          syncPersonaUI(data.status);
+          return;
         }
 
         const sender = (data.sender || 'BOT').toUpperCase();
         const content = data.content || '';
 
-        // Phase 1: BOT response
         if (sender === 'BOT') {
           appendBotMessage(content);
           playAudioAlert('chime');
-        }
-        // Phase 2: SYSTEM message (Handoff or Emergency)
-        else if (sender === 'SYSTEM') {
+        } else if (sender === 'SYSTEM') {
           appendSystemMessage(content);
 
-          // Check for handoff notice
           if (content.toLowerCase().includes('routing you to a human counselor')) {
-            tierBadge.className = 'badge badge-tier2';
-            tierBadge.textContent = 'Tier 2: Escalating...';
-            personaNameText.textContent = 'Routing to Campus Counselor...';
+            syncPersonaUI('AWAITING_COUNSELOR');
             playAudioAlert('alert');
           }
 
-          // Phase 4: SOS Emergency Triggered ("Help is on the way...")
+          if (content.toLowerCase().includes('counselor has joined')) {
+            syncPersonaUI('LIVE_COUNSELOR');
+            playAudioAlert('chime');
+          }
+
           if (content.toLowerCase().includes('help is on the way')) {
-            freezeChat();
+            syncPersonaUI('CRITICAL_SOS');
             playAudioAlert('sos');
           }
-        }
-        // Phase 3: COUNSELOR response (The Human takeover)
-        else if (sender === 'COUNSELOR') {
-          // Update UI state so student knows a licensed human has joined
-          personaAvatar.textContent = '👩‍⚕️';
-          personaAvatar.classList.add('counselor-mode');
-          personaNameText.textContent = 'Licensed Campus Counselor';
-          tierBadge.className = 'badge badge-tier2';
-          tierBadge.textContent = 'Tier 2: Human Counselor';
-          
+
+          if (content.toLowerCase().includes('returned to mind-mate ai companion')) {
+            syncPersonaUI('LIVE_BOT');
+            playAudioAlert('chime');
+          }
+        } else if (sender === 'COUNSELOR') {
+          syncPersonaUI('LIVE_COUNSELOR');
           appendCounselorMessage(content);
           playAudioAlert('chime');
         }
       }
 
-      // Render Messages
-      function appendBotMessage(text) {
+      // Message Rendering Helpers
+      function appendBotMessage(text, timestamp) {
+        if (defaultWelcomeRow) defaultWelcomeRow.style.display = 'none';
         const row = document.createElement('div');
         row.className = 'message-row bot';
         row.innerHTML = `
@@ -304,14 +394,15 @@
               <span>Mind-Mate AI Companion</span>
             </div>
             <div class="message-text">${escapeHTML(text)}</div>
-            <span class="message-time">${formatTime()}</span>
+            <span class="message-time">${formatTime(timestamp)}</span>
           </div>
         `;
-        chatMessages.appendChild(row);
+        messagesList.appendChild(row);
         scrollToBottom();
       }
 
-      function appendCounselorMessage(text) {
+      function appendCounselorMessage(text, timestamp) {
+        if (defaultWelcomeRow) defaultWelcomeRow.style.display = 'none';
         const row = document.createElement('div');
         row.className = 'message-row counselor';
         row.innerHTML = `
@@ -321,10 +412,10 @@
               <span>Campus Counselor (Human-in-the-Loop)</span>
             </div>
             <div class="message-text">${escapeHTML(text)}</div>
-            <span class="message-time">${formatTime()}</span>
+            <span class="message-time">${formatTime(timestamp)}</span>
           </div>
         `;
-        chatMessages.appendChild(row);
+        messagesList.appendChild(row);
         scrollToBottom();
       }
 
@@ -338,20 +429,21 @@
             <span>${escapeHTML(text)}</span>
           </div>
         `;
-        chatMessages.appendChild(row);
+        messagesList.appendChild(row);
         scrollToBottom();
       }
 
-      function appendStudentMessage(text) {
+      function appendStudentMessage(text, timestamp) {
+        if (defaultWelcomeRow) defaultWelcomeRow.style.display = 'none';
         const row = document.createElement('div');
         row.className = 'message-row student';
         row.innerHTML = `
           <div class="message-bubble">
             <div class="message-text">${escapeHTML(text)}</div>
-            <span class="message-time">${formatTime()} ✓</span>
+            <span class="message-time">${formatTime(timestamp)} ✓</span>
           </div>
         `;
-        chatMessages.appendChild(row);
+        messagesList.appendChild(row);
         scrollToBottom();
       }
 
@@ -359,7 +451,6 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
       }
 
-      // Freeze Chat on Phase 4 SOS Emergency
       function freezeChat() {
         isChatFrozen = true;
         chatFrozenBanner.classList.add('visible');
@@ -368,13 +459,14 @@
         sendBtn.disabled = true;
 
         personaAvatar.textContent = '🚨';
-        personaAvatar.classList.remove('counselor-mode');
-        personaAvatar.classList.add('sos-mode');
+        personaAvatar.className = 'persona-avatar sos-mode';
         personaNameText.textContent = 'Emergency Dispatch Active';
         tierBadge.className = 'badge badge-tier3';
         tierBadge.textContent = 'Tier 3: Critical SOS';
         wsStatusDot.className = 'status-dot sos';
         wsStatusText.textContent = 'SOS Active';
+        requestCounselorBtn.style.display = 'none';
+        returnToBotBtn.style.display = 'none';
       }
 
       // Send Message Event
@@ -386,7 +478,7 @@
         if (!text) return;
 
         if (!socket || socket.readyState !== WebSocket.OPEN) {
-          showToast('WebSocket is not connected. Reconnecting...', 'warning');
+          showToast('Connecting to chat server, please wait...', 'warning');
           return;
         }
 
@@ -394,8 +486,59 @@
         appendStudentMessage(text);
         messageInput.value = '';
 
-        // Send raw text to backend WebSocket as required
+        // Send to backend
         socket.send(text);
+      });
+
+      // Voluntary Request Counselor Button
+      requestCounselorBtn.addEventListener('click', async () => {
+        const confirmed = confirm("Would you like to connect with a licensed campus counselor?");
+        if (!confirmed) return;
+
+        try {
+          const res = await fetch(`/api/v1/sessions/${encodeURIComponent(sessionId)}/escalate`, { method: 'POST' });
+          if (res.ok) {
+            syncPersonaUI('AWAITING_COUNSELOR');
+            appendSystemMessage('Routing you to a licensed campus counselor. Your scrubbed chat is now in the triage queue.');
+            showToast('Counselor requested. Please wait a moment...', 'info');
+          }
+        } catch (e) {
+          showToast('Could not request counselor. Please try again.', 'danger');
+        }
+      });
+
+      // Return to AI Bot Companion Button
+      returnToBotBtn.addEventListener('click', async () => {
+        const confirmed = confirm("Would you like to switch back to the AI companion?");
+        if (!confirmed) return;
+
+        try {
+          const res = await fetch(`/api/v1/sessions/${encodeURIComponent(sessionId)}/return_to_bot`, { method: 'POST' });
+          if (res.ok) {
+            syncPersonaUI('LIVE_BOT');
+            appendSystemMessage('Switched back to Mind-Mate AI Companion mode.');
+            showToast('AI Companion restored! You can chat freely.', 'success');
+          }
+        } catch (e) {
+          showToast('Could not return to AI bot.', 'danger');
+        }
+      });
+
+      // Start New Fresh Chat Button
+      newChatBtn.addEventListener('click', async () => {
+        const confirmed = confirm("Start a new confidential chat session? Your current session will remain saved.");
+        if (!confirmed) return;
+
+        try {
+          const res = await fetch('/api/v1/sessions/start', { method: 'POST' });
+          if (res.ok) {
+            const data = await res.json();
+            sessionStorage.setItem('mindmate_session_id', data.session_id);
+            window.location.href = `student_chat.html?session_id=${encodeURIComponent(data.session_id)}`;
+          }
+        } catch (e) {
+          window.location.href = 'index.html';
+        }
       });
 
       // Crisis Modal handlers

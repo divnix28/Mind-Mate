@@ -63,7 +63,10 @@
           <button id="btnStartChat" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 1rem;">
             <span>🚀 Start Confidential Chat</span>
           </button>
-          <p id="sessionInitStatus" style="font-size: 0.78rem; color: var(--text-muted); text-align: center; margin-top: 10px; min-height: 18px;"></p>
+          <p id="sessionInitStatus" style="font-size: 0.78rem; color: var(--text-muted); text-align: center; margin-top: 6px; min-height: 18px;"></p>
+          <div style="text-align: center; margin-top: 4px;">
+            <a href="#" id="resumeLink" style="font-size: 0.76rem; color: var(--text-muted); text-decoration: underline;">Resume past session with ID</a>
+          </div>
         </div>
       </article>
 
@@ -150,6 +153,15 @@
       const cancelModal = document.getElementById('cancelModalBtn');
       const submitSession = document.getElementById('submitSessionBtn');
       const manualInput = document.getElementById('manualSessionIdInput');
+      const resumeLink = document.getElementById('resumeLink');
+
+      if (resumeLink) {
+        resumeLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          modal.classList.add('active');
+          manualInput.focus();
+        });
+      }
 
       // Check backend health
       fetch('/api/v1/health')
