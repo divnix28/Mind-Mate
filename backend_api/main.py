@@ -9,6 +9,7 @@ load_dotenv()
 
 from .database import engine, Base, get_db
 from .hitl_routes import router as hitl_router
+from .session_routes import router as session_router
 from .models import ChatSession, Message, SessionStatus, SenderType
 from backend_api.anonymizer import PIIAnonymizer
 from nlp_engine.risk_analyzer import RiskAnalyzer
@@ -35,20 +36,40 @@ risk_analyzer = RiskAnalyzer()
 class ConnectionManager:
     def __init__(self):
         self.active_sessions = {}
+        self.counselor_connections = set()
 
     async def connect(self, websocket: WebSocket, session_id: int, role: str):
         await websocket.accept()
         if session_id not in self.active_sessions:
             self.active_sessions[session_id] = {}
         self.active_sessions[session_id][role] = websocket
+        if role == "counselor":
+            self.counselor_connections.add(websocket)
 
-    def disconnect(self, session_id: int, role: str):
+    def disconnect(self, session_id: int, role: str, websocket: WebSocket = None):
         if session_id in self.active_sessions and role in self.active_sessions[session_id]:
             del self.active_sessions[session_id][role]
+            if not self.active_sessions[session_id]:
+                del self.active_sessions[session_id]
+        if role == "counselor" and websocket in self.counselor_connections:
+            self.counselor_connections.remove(websocket)
 
     async def send_to_role(self, session_id: int, role: str, message: dict):
         if session_id in self.active_sessions and role in self.active_sessions[session_id]:
-            await self.active_sessions[session_id][role].send_json(message)
+            try:
+                await self.active_sessions[session_id][role].send_json(message)
+            except Exception:
+                pass
+
+    async def broadcast_to_counselors(self, message: dict):
+        dead_sockets = []
+        for ws in self.counselor_connections:
+            try:
+                await ws.send_json(message)
+            except Exception:
+                dead_sockets.append(ws)
+        for dead in dead_sockets:
+            self.counselor_connections.discard(dead)
 
 manager = ConnectionManager()
 
@@ -59,12 +80,21 @@ def health_check():
 # --- Tier 1 & 2: Student Portal ---
 @app.websocket("/ws/student/{session_id}")
 async def student_chat_endpoint(websocket: WebSocket, session_id: int, db: Session = Depends(get_db)):
-    await manager.connect(websocket, session_id, "student")
-    
     chat_session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not chat_session:
+        await websocket.accept()
+        await websocket.send_json({"sender": "SYSTEM", "content": "Error: Chat session not found."})
         await websocket.close(code=1008)
         return
+
+    await manager.connect(websocket, session_id, "student")
+    
+    # Sync initial state to student client
+    await websocket.send_json({
+        "event": "SESSION_STATE",
+        "status": chat_session.status.value,
+        "session_id": session_id
+    })
 
     try:
         while True:
@@ -105,36 +135,79 @@ async def student_chat_endpoint(websocket: WebSocket, session_id: int, db: Sessi
                     # Halt bot and route to Human (Tier 2/3)
                     chat_session.status = SessionStatus.AWAITING_COUNSELOR
                     db.commit()
-                    await websocket.send_json({"sender": "SYSTEM", "content": "Routing you to a human counselor safely and anonymously..."})
-                    await manager.send_to_role(session_id, "counselor", {"event": "NEW_MODERATE_RISK"})
+                    await websocket.send_json({
+                        "sender": "SYSTEM",
+                        "content": "Routing you to a human counselor safely and anonymously..."
+                    })
+                    await manager.send_to_role(session_id, "counselor", {"event": "NEW_MODERATE_RISK", "session_id": session_id})
+                    await manager.broadcast_to_counselors({"event": "NEW_MODERATE_RISK", "session_id": session_id})
+
+            elif chat_session.status == SessionStatus.AWAITING_COUNSELOR:
+                # Waiting for a counselor to claim the room
+                await websocket.send_json({
+                    "sender": "SYSTEM",
+                    "content": "Your request is in the counselor queue. A campus counselor will join your session momentarily."
+                })
+                await manager.send_to_role(session_id, "counselor", {"sender": "STUDENT", "content": scrubbed_text})
+                await manager.broadcast_to_counselors({"event": "NEW_MODERATE_RISK", "session_id": session_id})
 
             elif chat_session.status == SessionStatus.LIVE_COUNSELOR:
-                await manager.send_to_role(session_id, "counselor", {"sender": "STUDENT", "content": scrubbed_text})
-            
+                # Active counselor session
+                if session_id in manager.active_sessions and "counselor" in manager.active_sessions[session_id]:
+                    await manager.send_to_role(session_id, "counselor", {"sender": "STUDENT", "content": scrubbed_text})
+                else:
+                    await websocket.send_json({
+                        "sender": "SYSTEM",
+                        "content": "Counselor is currently reconnecting. Your message has been safely logged."
+                    })
+
             elif chat_session.status == SessionStatus.CRITICAL_SOS:
                 await websocket.send_json({"sender": "SYSTEM", "content": "Help is on the way. Please stay right where you are."})
 
     except WebSocketDisconnect:
-        manager.disconnect(session_id, "student")
+        manager.disconnect(session_id, "student", websocket)
 
 # --- Tier 2: Counselor Portal ---
 @app.websocket("/ws/counselor/{session_id}")
 async def counselor_chat_endpoint(websocket: WebSocket, session_id: int, db: Session = Depends(get_db)):
-    await manager.connect(websocket, session_id, "counselor")
-    
     chat_session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not chat_session:
+        await websocket.accept()
+        await websocket.send_json({
+            "event": "ACCESS_DENIED",
+            "error": "SESSION_NOT_FOUND",
+            "detail": f"Session #{session_id} does not exist in the database."
+        })
         await websocket.close(code=1008)
         return
+
+    # STRICT PRIVACY ENFORCEMENT:
+    # A counselor CANNOT join an unescalated Tier 1 private AI companion session.
+    if chat_session.status == SessionStatus.LIVE_BOT:
+        await websocket.accept()
+        await websocket.send_json({
+            "event": "ACCESS_DENIED",
+            "error": "UNAUTHORIZED_ACCESS",
+            "detail": f"Access Denied: Session #{session_id} is in confidential AI companion mode (Tier 1). Counselors cannot join unescalated student chats."
+        })
+        await websocket.close(code=1008)
+        return
+
+    await manager.connect(websocket, session_id, "counselor")
+    
+    # If session was awaiting counselor, counselor claiming it sets it to LIVE_COUNSELOR
+    if chat_session.status == SessionStatus.AWAITING_COUNSELOR:
+        chat_session.status = SessionStatus.LIVE_COUNSELOR
+        db.commit()
+        await manager.send_to_role(session_id, "student", {
+            "sender": "SYSTEM",
+            "content": "A licensed campus counselor has joined the session."
+        })
 
     try:
         while True:
             data = await websocket.receive_text()
             db.refresh(chat_session)
-
-            if chat_session.status == SessionStatus.AWAITING_COUNSELOR:
-                chat_session.status = SessionStatus.LIVE_COUNSELOR
-                db.commit()
 
             if chat_session.status == SessionStatus.LIVE_COUNSELOR:
                 new_msg = Message(session_id=session_id, sender_type=SenderType.COUNSELOR, content=data)
@@ -143,8 +216,12 @@ async def counselor_chat_endpoint(websocket: WebSocket, session_id: int, db: Ses
                 await manager.send_to_role(session_id, "student", {"sender": "COUNSELOR", "content": data})
 
     except WebSocketDisconnect:
-        manager.disconnect(session_id, "counselor")
+        manager.disconnect(session_id, "counselor", websocket)
 
+# Register Sub-Routers
 app.include_router(hitl_router)
+app.include_router(session_router)
+
+# Mount Dashboard Frontend
 if os.path.exists("hitl_dashboard"):
     app.mount("/", StaticFiles(directory="hitl_dashboard", html=True), name="dashboard")
