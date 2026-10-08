@@ -61,10 +61,9 @@ def get_counselor_session_transcript(session_id: int, db: Session = Depends(get_
     """
     CRITICAL PRIVACY ENFORCEMENT:
     A counselor must NEVER see the student's private AI companion banter (Tier 1).
-    This endpoint ONLY returns:
-    1. The scrubbed escalation trigger summary
-    2. Messages exchanged DURING/AFTER escalation (between student and counselor)
+    This endpoint returns all student and counselor messages for escalated sessions.
     All student messages returned here are strictly scrubbed using Presidio PIIAnonymizer.
+    Private AI bot banter is completely excluded.
     """
     session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not session:
@@ -76,54 +75,14 @@ def get_counselor_session_transcript(session_id: int, db: Session = Depends(get_
             detail="Access Denied: Session is in confidential Tier 1 AI companion mode."
         )
 
-    # 1. Determine scrubbed escalation trigger
-    trigger_text = "Student requested counselor intervention"
-    start_msg_id = session.escalation_msg_id
-
-    if start_msg_id:
-        trigger_msg = db.query(Message).filter(Message.id == start_msg_id).first()
-        if trigger_msg:
-            trigger_text = anonymizer.clean_text(trigger_msg.content)
-    else:
-        # Fallback: look for the last student message before the first counselor message
-        first_counselor_msg = db.query(Message).filter(
-            Message.session_id == session_id,
-            Message.sender_type == SenderType.COUNSELOR
-        ).order_by(Message.timestamp.asc()).first()
-        
-        if first_counselor_msg:
-            trigger_candidate = db.query(Message).filter(
-                Message.session_id == session_id,
-                Message.sender_type == SenderType.STUDENT,
-                Message.timestamp <= first_counselor_msg.timestamp
-            ).order_by(Message.timestamp.desc()).first()
-            if trigger_candidate:
-                trigger_text = anonymizer.clean_text(trigger_candidate.content)
-                start_msg_id = trigger_candidate.id
-        else:
-            # If no counselor message yet, find the most recent student message that triggered awaiting
-            last_stud = db.query(Message).filter(
-                Message.session_id == session_id,
-                Message.sender_type == SenderType.STUDENT
-            ).order_by(Message.timestamp.desc()).first()
-            if last_stud:
-                trigger_text = anonymizer.clean_text(last_stud.content)
-                start_msg_id = last_stud.id
-
-    # 2. Query only messages exchanged during the counselor phase
-    query = db.query(Message).filter(Message.session_id == session_id)
-    if start_msg_id:
-        # Start immediately AFTER the trigger message
-        query = query.filter(Message.id > start_msg_id)
-    
-    raw_messages = query.order_by(Message.timestamp.asc()).all()
+    # Return all student & counselor messages for this session
+    messages = db.query(Message).filter(
+        Message.session_id == session_id,
+        Message.sender_type.in_([SenderType.STUDENT, SenderType.COUNSELOR])
+    ).order_by(Message.timestamp.asc()).all()
 
     formatted = []
-    for msg in raw_messages:
-        # Strictly omit any private BOT messages
-        if msg.sender_type == SenderType.BOT:
-            continue
-        
+    for msg in messages:
         # Scrub all student messages before counselor ever sees them
         content = anonymizer.clean_text(msg.content) if msg.sender_type == SenderType.STUDENT else msg.content
         formatted.append({
@@ -136,8 +95,41 @@ def get_counselor_session_transcript(session_id: int, db: Session = Depends(get_
     return {
         "session_id": session.id,
         "status": session.status.value,
-        "escalation_trigger": trigger_text,
         "messages": formatted
+    }
+
+@router.post("/sos/close/{session_id}")
+async def close_sos_incident(session_id: int, db: Session = Depends(get_db)):
+    """
+    Counselor stops the critical SOS alarm / protocol when the emergency matter is closed or resolved.
+    Transitions session status to LIVE_COUNSELOR so communication can continue normally.
+    """
+    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Chat session not found.")
+
+    session.status = SessionStatus.LIVE_COUNSELOR
+    db.commit()
+
+    # Inform student
+    await manager.send_to_role(session_id, "student", {
+        "sender": "SYSTEM",
+        "event": "SOS_RESOLVED",
+        "content": "The emergency SOS protocol has been closed by your counselor. You remain in safe communication."
+    })
+
+    # Broadcast to all counselors to update queue and active counselor console
+    await manager.broadcast_to_counselors({
+        "event": "SOS_RESOLVED",
+        "session_id": session_id,
+        "message": "Critical SOS closed. Emergency matter marked safe and resolved."
+    })
+
+    return {
+        "status": "success",
+        "session_id": session_id,
+        "new_status": session.status.value,
+        "message": f"Critical SOS for session #{session_id} has been stopped and marked safe."
     }
 
 @router.post("/resolve/{session_id}")
@@ -175,8 +167,11 @@ async def resolve_counselor_session(session_id: int, db: Session = Depends(get_d
         "message": f"Session #{session_id} resolved and returned to AI companion mode."
     }
 
-@router.post("/sos/unmask/{session_id}")
-def trigger_sos_unmask(session_id: int, db: Session = Depends(get_db)):
+@router.get("/sos/details/{session_id}")
+def get_sos_details(session_id: int, db: Session = Depends(get_db)):
+    """
+    Read-only endpoint to fetch unmasked student dispatch details without triggering any alerts or events.
+    """
     session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not session:
         raise HTTPException(status_code=404, detail="Chat session not found.")
@@ -185,9 +180,42 @@ def trigger_sos_unmask(session_id: int, db: Session = Depends(get_db)):
     if not student:
         raise HTTPException(status_code=404, detail="Student record not found.")
 
-    # Override the chat state to halt all normal bot/chat operations
-    session.status = SessionStatus.CRITICAL_SOS
-    db.commit()
+    return {
+        "student_name": student.name,
+        "reg_no": student.reg_no,
+        "location": f"Block {student.block}, Room {student.room}",
+        "phone": student.phone,
+        "email": student.email or "N/A"
+    }
+
+@router.post("/sos/unmask/{session_id}")
+async def trigger_sos_unmask(session_id: int, db: Session = Depends(get_db)):
+    session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Chat session not found.")
+    
+    student = db.query(Student).filter(Student.id == session.student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student record not found.")
+
+    # Only broadcast dispatch notifications if session is not already in CRITICAL_SOS
+    if session.status != SessionStatus.CRITICAL_SOS:
+        session.status = SessionStatus.CRITICAL_SOS
+        db.commit()
+
+        # Alert the student via WebSocket ONCE
+        await manager.send_to_role(session_id, "student", {
+            "event": "SOS_DISPATCH_TRIGGERED",
+            "sender": "SYSTEM",
+            "content": "Campus emergency team has been alerted for physical support. Your counselor remains live with you in this chat."
+        })
+
+        # Broadcast to all counselors ONCE
+        await manager.broadcast_to_counselors({
+            "event": "CRITICAL_SOS_TRIGGERED",
+            "session_id": session_id,
+            "message": f"Emergency campus dispatch unmasked for Session #{session_id}."
+        })
 
     # Return unredacted data for emergency dispatch
     return {
@@ -195,5 +223,6 @@ def trigger_sos_unmask(session_id: int, db: Session = Depends(get_db)):
         "student_name": student.name,
         "reg_no": student.reg_no,
         "location": f"Block {student.block}, Room {student.room}",
-        "phone": student.phone
+        "phone": student.phone,
+        "email": student.email or "N/A"
     }

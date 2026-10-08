@@ -68,9 +68,10 @@ Do not include markdown blocks, pleasantries, or preamble. Return ONLY the raw J
             ],
             "self_harm_language": [
                 r"\bhurt myself\b", r"\bharm myself\b", r"\bcut myself\b",
-                r"\bend my life\b", r"\bkill myself\b", r"\bsuicide\b",
-                r"\bdon(?:'|’)t want to live\b", r"\bdo not want to live\b",
-                r"\bi do not want to live\b", r"\bwant to die\b",
+                r"\bend\s+(?:my\s*)?life\b", r"\bkill\s+(?:my\s*)?s[le]{2,4}f\b", r"\bsuicid[a-z]*\b",
+                r"\bdon(?:'|’)t\s+want\s+to\s+live\b", r"\bdo not want to live\b",
+                r"\bi do not want to live\b", r"\bwant to die\b", r"\bkill\s+me\b",
+                r"\bhang\s+(?:my\s*)?s[le]{2,4}f\b", r"\bbetter\s+off\s+dead\b",
             ],
         }
 
@@ -93,6 +94,33 @@ Do not include markdown blocks, pleasantries, or preamble. Return ONLY the raw J
         Asynchronously calls the Groq API to generate a triage response.
         Enforces a JSON return format: {"bot_reply": "...", "risk_tier": 1|2|3}
         """
+        # CRITICAL LIFE-SAFETY OVERRIDE:
+        # Detect explicit self-harm or suicidal intent deterministically (including typos like 'my slef', 'myslef')
+        suicide_patterns = [
+            r"\bkill\s+(?:my\s*)?s[le]{2,4}f\b",
+            r"\bkill\s+me\b",
+            r"\bend\s+(?:my\s*)?life\b",
+            r"\bsuicid[a-z]*\b",
+            r"\bwant\s+to\s+die\b",
+            r"\bwish\s+i\s+(?:was|were)\s+dead\b",
+            r"\bhang\s+(?:my\s*)?s[le]{2,4}f\b",
+            r"\btake\s+my\s+(?:own\s+)?life\b",
+            r"\bslit\s+(?:my\s*)?wrist[s]?\b",
+            r"\boverdose\b",
+            r"\bjump\s+off\b",
+            r"\bdon(?:'|’)?t\s+want\s+to\s+live\b",
+            r"\bno\s+reason\s+to\s+live\b",
+            r"\bbetter\s+off\s+dead\b",
+            r"\bi(?:\s*will|'ll|\s*m\s+gonna)\s+kill\s+(?:my\s*)?s[le]{2,4}f\b"
+        ]
+        for pat in suicide_patterns:
+            if re.search(pat, latest_scrubbed_message, re.IGNORECASE):
+                logger.warning(f"Immediate Critical SOS Triggered for: {latest_scrubbed_message}")
+                return {
+                    "bot_reply": "I hear how much pain you are carrying right now. Please know that your life matters and you are not alone. I am immediately alerting our campus emergency support team and connecting a counselor to stay with you.",
+                    "risk_tier": 3
+                }
+
         # Construct messages payload
         messages = [{"role": "system", "content": self.system_prompt}]
         messages.extend(chat_history)
