@@ -1,14 +1,23 @@
 import os
+import re
+import logging
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
+logger = logging.getLogger(__name__)
+
 load_dotenv()
 
 from .database import engine, Base, get_db
+from .connection_manager import manager
+from .auth_routes import router as auth_router
 from .hitl_routes import router as hitl_router
+from .session_routes import router as session_router
+from .seed_users import ensure_schema_and_seed
 from .models import ChatSession, Message, SessionStatus, SenderType
 from backend_api.anonymizer import PIIAnonymizer
 from nlp_engine.risk_analyzer import RiskAnalyzer
@@ -19,6 +28,10 @@ app = FastAPI(
     title="Mind-Mate Real-Time Engine",
     description="3-Tier Mental Health Triage and WebSocket Routing"
 )
+
+@app.on_event("startup")
+def startup_event():
+    ensure_schema_and_seed()
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,27 +44,6 @@ app.add_middleware(
 anonymizer = PIIAnonymizer()
 risk_analyzer = RiskAnalyzer()
 
-# --- Connection Manager ---
-class ConnectionManager:
-    def __init__(self):
-        self.active_sessions = {}
-
-    async def connect(self, websocket: WebSocket, session_id: int, role: str):
-        await websocket.accept()
-        if session_id not in self.active_sessions:
-            self.active_sessions[session_id] = {}
-        self.active_sessions[session_id][role] = websocket
-
-    def disconnect(self, session_id: int, role: str):
-        if session_id in self.active_sessions and role in self.active_sessions[session_id]:
-            del self.active_sessions[session_id][role]
-
-    async def send_to_role(self, session_id: int, role: str, message: dict):
-        if session_id in self.active_sessions and role in self.active_sessions[session_id]:
-            await self.active_sessions[session_id][role].send_json(message)
-
-manager = ConnectionManager()
-
 @app.get("/api/v1/health")
 def health_check():
     return {"status": "Active", "system": "Mind-Mate API Engine"}
@@ -59,12 +51,21 @@ def health_check():
 # --- Tier 1 & 2: Student Portal ---
 @app.websocket("/ws/student/{session_id}")
 async def student_chat_endpoint(websocket: WebSocket, session_id: int, db: Session = Depends(get_db)):
-    await manager.connect(websocket, session_id, "student")
-    
     chat_session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not chat_session:
+        await websocket.accept()
+        await websocket.send_json({"sender": "SYSTEM", "content": "Error: Chat session not found."})
         await websocket.close(code=1008)
         return
+
+    await manager.connect(websocket, session_id, "student")
+    
+    # Sync initial state to student client
+    await websocket.send_json({
+        "event": "SESSION_STATE",
+        "status": chat_session.status.value,
+        "session_id": session_id
+    })
 
     try:
         while True:
@@ -93,58 +94,205 @@ async def student_chat_endpoint(websocket: WebSocket, session_id: int, db: Sessi
                     safe_content = anonymizer.clean_text(msg.content) if role == "user" else msg.content
                     chat_history.append({"role": role, "content": safe_content})
                     
-                # Await Member 3's LLM evaluation
+                # Await LLM evaluation
                 llm_response = await risk_analyzer.generate_triage_response(chat_history, scrubbed_text)
                 
                 if llm_response["risk_tier"] == 1:
-                    bot_msg = Message(session_id=session_id, sender_type=SenderType.BOT, content=llm_response["bot_reply"])
+                    # Scrub bot reply as well so it never mirrors student names or identifiers
+                    safe_bot_reply = anonymizer.clean_text(llm_response["bot_reply"])
+                    bot_msg = Message(session_id=session_id, sender_type=SenderType.BOT, content=safe_bot_reply)
                     db.add(bot_msg)
                     db.commit()
-                    await websocket.send_json({"sender": "BOT", "content": llm_response["bot_reply"]})
-                else:
-                    # Halt bot and route to Human (Tier 2/3)
-                    chat_session.status = SessionStatus.AWAITING_COUNSELOR
-                    db.commit()
-                    await websocket.send_json({"sender": "SYSTEM", "content": "Routing you to a human counselor safely and anonymously..."})
-                    await manager.send_to_role(session_id, "counselor", {"event": "NEW_MODERATE_RISK"})
+                    await websocket.send_json({"sender": "BOT", "content": safe_bot_reply})
 
-            elif chat_session.status == SessionStatus.LIVE_COUNSELOR:
+                elif llm_response["risk_tier"] == 3:
+                    # DIRECT AUTOMATIC ESCALATION TO TIER 3 (CRITICAL_SOS)
+                    chat_session.status = SessionStatus.CRITICAL_SOS
+                    chat_session.escalation_msg_id = new_msg.id
+                    chat_session.escalated_at = datetime.now(timezone.utc)
+
+                    # Store supportive bot response
+                    safe_bot_reply = anonymizer.clean_text(llm_response["bot_reply"])
+                    bot_msg = Message(session_id=session_id, sender_type=SenderType.BOT, content=safe_bot_reply)
+                    db.add(bot_msg)
+                    db.commit()
+
+                    await websocket.send_json({"sender": "BOT", "content": safe_bot_reply})
+                    await websocket.send_json({
+                        "sender": "SYSTEM",
+                        "event": "CRITICAL_SOS_TRIGGERED",
+                        "content": "Emergency support has been alerted. Your counselor is connecting live in this chat—please stay with us."
+                    })
+
+                    sos_payload = {
+                        "event": "CRITICAL_SOS_TRIGGERED",
+                        "session_id": session_id,
+                        "trigger": scrubbed_text,
+                        "message": "CRITICAL SOS: Imminent self-harm/suicide risk detected. Immediate dispatch required!"
+                    }
+                    await manager.broadcast_to_counselors(sos_payload)
+
+                else:
+                    # Tier 2: Route to Human Counselor
+                    chat_session.status = SessionStatus.AWAITING_COUNSELOR
+                    chat_session.escalation_msg_id = new_msg.id
+                    chat_session.escalated_at = datetime.now(timezone.utc)
+                    db.commit()
+                    await websocket.send_json({
+                        "sender": "SYSTEM",
+                        "content": "Routing you to a human counselor safely and anonymously..."
+                    })
+                    await manager.send_to_role(session_id, "counselor", {
+                        "event": "NEW_MODERATE_RISK", 
+                        "session_id": session_id,
+                        "trigger": scrubbed_text
+                    })
+                    await manager.broadcast_to_counselors({
+                        "event": "NEW_MODERATE_RISK", 
+                        "session_id": session_id,
+                        "trigger": scrubbed_text
+                    })
+
+            elif chat_session.status == SessionStatus.AWAITING_COUNSELOR:
+                # Check for critical suicide escalation while awaiting
+                suicide_detected = any(re.search(pat, scrubbed_text, re.IGNORECASE) for pat in [
+                    r"\bkill\s+(?:my\s*)?s[le]{2,4}f\b", r"\bkill\s+me\b", r"\bend\s+(?:my\s*)?life\b",
+                    r"\bsuicid[a-z]*\b", r"\bwant\s+to\s+die\b", r"\bhang\s+(?:my\s*)?s[le]{2,4}f\b"
+                ])
+                if suicide_detected:
+                    chat_session.status = SessionStatus.CRITICAL_SOS
+                    db.commit()
+                    await websocket.send_json({
+                        "sender": "SYSTEM",
+                        "event": "CRITICAL_SOS_TRIGGERED",
+                        "content": "Emergency support has been alerted. Your counselor is connecting with you right now."
+                    })
+                    await manager.broadcast_to_counselors({
+                        "event": "CRITICAL_SOS_TRIGGERED",
+                        "session_id": session_id,
+                        "trigger": scrubbed_text
+                    })
+                else:
+                    await websocket.send_json({
+                        "sender": "SYSTEM",
+                        "content": "Your request is in the counselor queue. A campus counselor will join your session momentarily."
+                    })
                 await manager.send_to_role(session_id, "counselor", {"sender": "STUDENT", "content": scrubbed_text})
-            
-            elif chat_session.status == SessionStatus.CRITICAL_SOS:
-                await websocket.send_json({"sender": "SYSTEM", "content": "Help is on the way. Please stay right where you are."})
+
+            elif chat_session.status in [SessionStatus.LIVE_COUNSELOR, SessionStatus.CRITICAL_SOS]:
+                # Active counselor session - check for acute suicide escalation if not already in SOS
+                if chat_session.status != SessionStatus.CRITICAL_SOS:
+                    suicide_detected = any(re.search(pat, scrubbed_text, re.IGNORECASE) for pat in [
+                        r"\bkill\s+(?:my\s*)?s[le]{2,4}f\b", r"\bkill\s+me\b", r"\bend\s+(?:my\s*)?life\b",
+                        r"\bsuicid[a-z]*\b", r"\bwant\s+to\s+die\b", r"\bhang\s+(?:my\s*)?s[le]{2,4}f\b",
+                        r"\bbetter\s+off\s+dead\b"
+                    ])
+                    if suicide_detected:
+                        chat_session.status = SessionStatus.CRITICAL_SOS
+                        chat_session.escalation_msg_id = new_msg.id
+                        chat_session.escalated_at = datetime.now(timezone.utc)
+                        db.commit()
+                        await websocket.send_json({
+                            "sender": "SYSTEM",
+                            "event": "CRITICAL_SOS_TRIGGERED",
+                            "content": "Emergency support has been alerted. Your counselor is live in this chat."
+                        })
+                        sos_payload = {
+                            "event": "CRITICAL_SOS_TRIGGERED",
+                            "session_id": session_id,
+                            "trigger": scrubbed_text,
+                            "message": "EMERGENCY: Student indicated imminent self-harm/suicide risk. Immediate dispatch required!"
+                        }
+                        await manager.broadcast_to_counselors(sos_payload)
+
+                sent = await manager.send_to_role(session_id, "counselor", {"sender": "STUDENT", "content": scrubbed_text})
+                if not sent:
+                    logger.info(f"Student message in session {session_id} saved to DB (counselor socket inactive).")
 
     except WebSocketDisconnect:
-        manager.disconnect(session_id, "student")
+        manager.disconnect(session_id, "student", websocket)
+    except Exception as e:
+        logger.exception(f"Unhandled error in student websocket for session {session_id}: {e}")
+        manager.disconnect(session_id, "student", websocket)
 
 # --- Tier 2: Counselor Portal ---
 @app.websocket("/ws/counselor/{session_id}")
 async def counselor_chat_endpoint(websocket: WebSocket, session_id: int, db: Session = Depends(get_db)):
-    await manager.connect(websocket, session_id, "counselor")
-    
     chat_session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not chat_session:
+        await websocket.accept()
+        await websocket.send_json({
+            "event": "ACCESS_DENIED",
+            "error": "SESSION_NOT_FOUND",
+            "detail": f"Session #{session_id} does not exist in the database."
+        })
         await websocket.close(code=1008)
         return
+
+    # STRICT PRIVACY ENFORCEMENT:
+    # A counselor CANNOT join an unescalated Tier 1 private AI companion session.
+    if chat_session.status == SessionStatus.LIVE_BOT:
+        await websocket.accept()
+        await websocket.send_json({
+            "event": "ACCESS_DENIED",
+            "error": "UNAUTHORIZED_ACCESS",
+            "detail": f"Access Denied: Session #{session_id} is in confidential AI companion mode (Tier 1). Counselors cannot join unescalated student chats."
+        })
+        await websocket.close(code=1008)
+        return
+
+    await manager.connect(websocket, session_id, "counselor")
+    
+    # If session was awaiting counselor, counselor claiming it sets it to LIVE_COUNSELOR
+    if chat_session.status == SessionStatus.AWAITING_COUNSELOR:
+        chat_session.status = SessionStatus.LIVE_COUNSELOR
+        db.commit()
+        await manager.send_to_role(session_id, "student", {
+            "sender": "SYSTEM",
+            "content": "A licensed campus counselor has joined the session."
+        })
+    elif chat_session.status == SessionStatus.CRITICAL_SOS:
+        await websocket.send_json({
+            "event": "SESSION_STATE",
+            "status": "CRITICAL_SOS",
+            "session_id": session_id,
+            "message": "Session is in CRITICAL SOS status."
+        })
+        await manager.send_to_role(session_id, "student", {
+            "sender": "SYSTEM",
+            "content": "A licensed campus counselor is actively connected to support you."
+        })
 
     try:
         while True:
             data = await websocket.receive_text()
+            if not data or not data.strip():
+                continue
             db.refresh(chat_session)
 
-            if chat_session.status == SessionStatus.AWAITING_COUNSELOR:
-                chat_session.status = SessionStatus.LIVE_COUNSELOR
-                db.commit()
-
-            if chat_session.status == SessionStatus.LIVE_COUNSELOR:
+            # Both LIVE_COUNSELOR and CRITICAL_SOS allow counselor to talk directly to the student!
+            if chat_session.status in [SessionStatus.LIVE_COUNSELOR, SessionStatus.CRITICAL_SOS]:
                 new_msg = Message(session_id=session_id, sender_type=SenderType.COUNSELOR, content=data)
                 db.add(new_msg)
                 db.commit()
-                await manager.send_to_role(session_id, "student", {"sender": "COUNSELOR", "content": data})
+                sent = await manager.send_to_role(session_id, "student", {"sender": "COUNSELOR", "content": data})
+                if not sent:
+                    await websocket.send_json({
+                        "event": "STUDENT_OFFLINE",
+                        "detail": "Student is currently reconnecting. Your message has been saved in the transcript."
+                    })
 
     except WebSocketDisconnect:
-        manager.disconnect(session_id, "counselor")
+        manager.disconnect(session_id, "counselor", websocket)
+    except Exception as e:
+        logger.exception(f"Unhandled error in counselor websocket for session {session_id}: {e}")
+        manager.disconnect(session_id, "counselor", websocket)
 
+# Register Sub-Routers
+app.include_router(auth_router)
 app.include_router(hitl_router)
+app.include_router(session_router)
+
+# Mount Dashboard Frontend
 if os.path.exists("hitl_dashboard"):
     app.mount("/", StaticFiles(directory="hitl_dashboard", html=True), name="dashboard")

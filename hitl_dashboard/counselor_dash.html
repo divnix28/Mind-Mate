@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Mind-Mate HITL Counselor Dashboard: Real-Time Triage & Emergency Dispatch">
+  <title>Counselor Dashboard | Mind-Mate HITL</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩺</text></svg>">
+</head>
+<body class="counselor-layout">
+
+  <!-- =========================================================================
+       LEFT PANE: Triage Queue & Session Monitor
+       ========================================================================= -->
+  <aside class="counselor-sidebar">
+    <!-- Counselor Info & Header -->
+    <div class="sidebar-header">
+      <div class="counselor-profile">
+        <div class="counselor-info">
+          <div class="counselor-avatar">🩺</div>
+          <div>
+            <div class="counselor-name" id="counselorNameDisplay">Dr. Vijay Kumar Trivedi</div>
+            <div class="counselor-role mono" id="counselorIdDisplay" style="font-size: 0.72rem; color: var(--text-muted);">ID: counselor_vkt</div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 4px; align-items: center;">
+          <button id="btnCounselorLogout" class="btn btn-ghost" style="padding: 4px 6px; font-size: 0.72rem;" title="Sign Out">Sign Out</button>
+          <a href="index.html" class="btn btn-ghost" style="padding: 4px 6px; font-size: 0.72rem;" title="Portal Home">Home ↗</a>
+        </div>
+      </div>
+
+      <!-- Filter Controls -->
+      <div class="queue-filter-bar">
+        <button id="filterAwaiting" class="filter-btn active">Awaiting (<span id="awaitingCount">0</span>)</button>
+        <button id="filterActive" class="filter-btn">Active (<span id="activeCount">0</span>)</button>
+        <button id="filterAll" class="filter-btn">All (<span id="allCount">0</span>)</button>
+      </div>
+    </div>
+
+    <!-- Incoming Escalations & Session Queue List -->
+    <div class="sidebar-queue-list" id="queueList">
+      <!-- Session cards will be dynamically injected here -->
+      <div class="queue-empty-state" id="queueEmptyState">
+        <div style="font-size: 2rem; margin-bottom: 8px;">⏳</div>
+        <div>No pending triage escalations in queue.</div>
+        <div style="font-size: 0.75rem; margin-top: 4px; color: var(--text-muted);">
+          When a student conversation requires counseling or human support, it will automatically appear here.
+        </div>
+      </div>
+    </div>
+
+    <!-- Manual Session ID Connector -->
+    <div class="sidebar-footer">
+      <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; text-transform: uppercase;">
+        Monitor Escalated Session by ID
+      </div>
+      <div class="manual-connect-box">
+        <input 
+          type="number" 
+          id="manualJoinInput" 
+          class="manual-input" 
+          placeholder="Enter Session ID (e.g. 1)" 
+          min="1"
+        >
+        <button id="manualJoinBtn" class="btn btn-secondary" style="font-size: 0.78rem; padding: 8px 12px;">
+          Join
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- =========================================================================
+       RIGHT PANE: Active Intervention Console
+       ========================================================================= -->
+  <main class="counselor-console" id="counselorConsole">
+
+    <!-- Empty State (When no session is active) -->
+    <div class="console-empty-state" id="consoleEmptyState">
+      <div class="console-empty-icon">🛡️</div>
+      <h2 class="console-empty-title">Select an Escalated Session to Begin Intervention</h2>
+      <p class="console-empty-desc">
+        Click <strong>"Join Chat"</strong> on any session in the triage queue on the left to review the conversation and provide live counseling.
+      </p>
+    </div>
+
+    <!-- Active Session Console (Hidden until session joined) -->
+    <div id="activeSessionWorkspace" style="display: none; flex-direction: column; height: 100%; width: 100%;">
+      
+      <!-- Top Action Bar with Single Red Emergency Dispatch Button -->
+      <header class="console-header">
+        <div class="active-session-meta">
+          <div class="student-avatar-anon">👤</div>
+          <div class="active-meta-titles">
+            <h3>
+              <span id="activeSessionTitle">Student Session #--</span>
+              <span id="activeStatusBadge" class="badge badge-tier2">Human Counselor</span>
+            </h3>
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 2px;">
+              <span id="counselorWsDot" class="status-dot connecting"></span>
+              <span id="counselorWsText" style="font-size: 0.75rem; color: var(--text-secondary);">Connecting...</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="console-actions" style="display: flex; gap: 10px; align-items: center;">
+          <!-- Stop SOS / Matter Closed Button (Shown when session is in CRITICAL_SOS) -->
+          <button id="btnStopSos" class="btn btn-secondary" style="display: none; background: rgba(16, 185, 129, 0.2); border-color: var(--teal-500); color: #34d399; font-size: 0.78rem; padding: 6px 14px;" title="Emergency incident handled - close SOS and return to safe counseling">
+            <span>🛑 Stop SOS / Matter Closed</span>
+          </button>
+          <!-- Compact Red Emergency Dispatch Button -->
+          <button id="btnSosUnmask" class="btn-break-glass" title="Emergency Dispatch Protocol">
+            <span class="sos-icon">🚨</span>
+            <span>Emergency Dispatch</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Scrubbed Chat Transcript Area -->
+      <div class="console-messages" id="consoleMessages"></div>
+
+      <!-- Counselor Response Composer -->
+      <footer class="console-composer">
+        <!-- Clinical Quick Response Chips -->
+        <div class="quick-prompts-bar">
+          <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600; white-space: nowrap;">QUICK PROMPTS:</span>
+          <button class="quick-prompt-chip" data-text="Hello, I'm a campus counselor. I'm here with you right now.">
+            "Hello, I'm a campus counselor..."
+          </button>
+          <button class="quick-prompt-chip" data-text="You are safe here. Take a deep breath and tell me what's on your mind.">
+            "You are safe here..."
+          </button>
+          <button class="quick-prompt-chip" data-text="I hear you, and your feelings are completely valid. I am listening.">
+            "I hear you, and your feelings are valid..."
+          </button>
+          <button class="quick-prompt-chip" data-text="Can you let me know if anyone is currently with you?">
+            "Can you let me know if anyone is with you?..."
+          </button>
+        </div>
+
+        <!-- Text Input Row -->
+        <form id="composerForm" class="composer-input-row">
+          <input 
+            type="text" 
+            id="counselorInput" 
+            class="composer-input" 
+            placeholder="Type your clinical response... (Enter to send)" 
+            autocomplete="off"
+          >
+          <button type="submit" id="counselorSendBtn" class="btn btn-primary" style="padding: 10px 20px;">
+            <span>Send 💬</span>
+          </button>
+        </form>
+      </footer>
+    </div>
+  </main>
+
+  <!-- =========================================================================
+       THE EMERGENCY UNMASK MODAL (Break-Glass Dispatch Data)
+       ========================================================================= -->
+  <div id="sosModal" class="modal-overlay">
+    <div class="emergency-modal-card">
+      <div class="modal-emergency-header">
+        <div class="modal-emergency-title">
+          <span style="font-size: 1.6rem; animation: pulse-sos-icon 0.8s infinite;">🚨</span>
+          <div>
+            <h2>CRITICAL SOS TRIGGERED</h2>
+            <div style="font-size: 0.75rem; opacity: 0.9;">Campus Emergency Dispatch</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="modal-emergency-badge">EMERGENCY PROTOCOL</div>
+          <button id="closeSosModalTopBtn" class="btn btn-ghost" style="color: white; font-size: 1.4rem; padding: 2px 8px; line-height: 1; cursor: pointer;" title="Close Modal">&times;</button>
+        </div>
+      </div>
+
+      <div class="modal-emergency-body">
+        <div class="emergency-banner-callout">
+          <span style="font-size: 1.4rem;">⚠️</span>
+          <div>
+            <strong>Campus Security &amp; Medical Center Notification</strong>
+            <div style="font-size: 0.78rem; opacity: 0.9;">
+              Hostel location and emergency contact details for physical intervention.
+            </div>
+          </div>
+        </div>
+
+        <div class="unmasked-data-grid">
+          <div class="data-field-box highlight">
+            <span class="field-label">Student Full Name</span>
+            <span class="field-value" id="unmaskedName">Loading...</span>
+          </div>
+
+          <div class="data-field-box">
+            <span class="field-label">Registration / Roll No</span>
+            <span class="field-value" id="unmaskedRegNo">Loading...</span>
+          </div>
+
+          <div class="data-field-box highlight">
+            <span class="field-label">Hostel &amp; Room Location</span>
+            <span class="field-value" id="unmaskedLocation">Loading...</span>
+          </div>
+
+          <div class="data-field-box">
+            <span class="field-label">Emergency Contact Phone</span>
+            <span class="field-value" id="unmaskedPhone">Loading...</span>
+          </div>
+
+          <div class="data-field-box highlight">
+            <span class="field-label">Student Campus Email</span>
+            <span class="field-value" id="unmaskedEmail">Loading...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button id="btnModalStopSos" class="btn btn-secondary" style="background: rgba(16, 185, 129, 0.25); border-color: rgba(16, 185, 129, 0.5); color: #34d399; font-weight: 700;">
+          🛑 Stop SOS / Matter Closed
+        </button>
+        <button id="copyDispatchBtn" class="btn btn-secondary">
+          📋 Copy Dispatch Details
+        </button>
+        <a id="callSecurityBtn" href="tel:100" class="btn btn-danger" style="color: white; background: #dc2626;">
+          📞 Call Campus Security
+        </a>
+        <button id="closeSosModalBtn" class="btn btn-ghost">
+          ✕ Close &amp; Return to Chat
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Counselor Staff Login Modal -->
+  <div id="counselorAuthModal" class="modal-overlay">
+    <div class="auth-modal-card" style="max-width: 760px;">
+      <div class="auth-header">
+        <div class="auth-header-icon">🩺</div>
+        <h2 class="auth-header-title">Counselor Staff Authentication</h2>
+        <p class="auth-header-desc">Authorized Clinical &amp; Campus Mental Health Personnel Only</p>
+      </div>
+
+      <!-- Quick 1-Click Demo Profiles (Spacious 2-Col Grid) -->
+      <div class="demo-profiles-container">
+        <div class="demo-profiles-header">
+          <span class="demo-profiles-label">Quick 1-Click Demo Counselor Access</span>
+          <span class="demo-profiles-badge">Pre-configured Staff Accounts</span>
+        </div>
+        <div class="demo-counselors-grid">
+          <button type="button" class="demo-student-card-btn demo-counselor-btn" data-id="counselor_vkt" data-pass="counselor123">
+            <span class="student-name">👨‍⚕️ Dr. Vijay Kumar Trivedi</span>
+            <span class="student-sub">Senior Clinical Counselor • ID: counselor_vkt</span>
+          </button>
+          <button type="button" class="demo-student-card-btn demo-counselor-btn" data-id="counselor_kps" data-pass="counselor123">
+            <span class="student-name">👨‍⚕️ Dr. Kunwar Pratap Singh</span>
+            <span class="student-sub">Campus Mental Health Officer • ID: counselor_kps</span>
+          </button>
+        </div>
+      </div>
+
+      <form id="counselorLoginForm">
+        <div class="auth-form-grid">
+          <div class="auth-form-group">
+            <label>Counselor Employee ID</label>
+            <input type="text" id="counselorLoginId" placeholder="e.g. counselor_vkt" required>
+          </div>
+          <div class="auth-form-group">
+            <label>Staff Password</label>
+            <input type="password" id="counselorLoginPass" placeholder="Enter clinical password" required>
+          </div>
+        </div>
+        <button type="submit" id="counselorLoginSubmitBtn" class="auth-submit-btn">
+          Sign In to Clinical Triage Desk →
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/common.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // State Management
+      let currentSessionId = null;
+      const counselorSockets = new Map(); // sessionId -> WebSocket
+      const unreadSessionMessages = new Set(); // sessionIds with unread student messages
+      let activeFilter = 'AWAITING';
+
+      // Queue state
+      let sessionsMap = new Map();
+
+      // UI Elements
+      const queueList = document.getElementById('queueList');
+      const queueEmptyState = document.getElementById('queueEmptyState');
+      const consoleEmptyState = document.getElementById('consoleEmptyState');
+      const activeSessionWorkspace = document.getElementById('activeSessionWorkspace');
+      const activeSessionTitle = document.getElementById('activeSessionTitle');
+      const activeStatusBadge = document.getElementById('activeStatusBadge');
+      const counselorWsDot = document.getElementById('counselorWsDot');
+      const counselorWsText = document.getElementById('counselorWsText');
+      const consoleMessages = document.getElementById('consoleMessages');
+      const composerForm = document.getElementById('composerForm');
+      const counselorInput = document.getElementById('counselorInput');
+      const btnSosUnmask = document.getElementById('btnSosUnmask');
+      const btnStopSos = document.getElementById('btnStopSos');
+      const btnModalStopSos = document.getElementById('btnModalStopSos');
+
+      // Modal elements
+      const sosModal = document.getElementById('sosModal');
+      const unmaskedName = document.getElementById('unmaskedName');
+      const unmaskedRegNo = document.getElementById('unmaskedRegNo');
+      const unmaskedLocation = document.getElementById('unmaskedLocation');
+      const unmaskedPhone = document.getElementById('unmaskedPhone');
+      const unmaskedEmail = document.getElementById('unmaskedEmail');
+      const copyDispatchBtn = document.getElementById('copyDispatchBtn');
+      const callSecurityBtn = document.getElementById('callSecurityBtn');
+      const closeSosModalBtn = document.getElementById('closeSosModalBtn');
+
+      // Counselor Profile & Auth elements
+      const counselorNameDisplay = document.getElementById('counselorNameDisplay');
+      const counselorIdDisplay = document.getElementById('counselorIdDisplay');
+      const btnCounselorLogout = document.getElementById('btnCounselorLogout');
+      const counselorAuthModal = document.getElementById('counselorAuthModal');
+      const counselorLoginForm = document.getElementById('counselorLoginForm');
+      const counselorLoginId = document.getElementById('counselorLoginId');
+      const counselorLoginPass = document.getElementById('counselorLoginPass');
+
+      // Manual join elements
+      const manualJoinInput = document.getElementById('manualJoinInput');
+      const manualJoinBtn = document.getElementById('manualJoinBtn');
+
+      // Filter buttons
+      const filterAwaiting = document.getElementById('filterAwaiting');
+      const filterActive = document.getElementById('filterActive');
+      const filterAll = document.getElementById('filterAll');
+      const awaitingCount = document.getElementById('awaitingCount');
+      const activeCount = document.getElementById('activeCount');
+      const allCount = document.getElementById('allCount');
+
+      // Quick prompt buttons
+      document.querySelectorAll('.quick-prompt-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          counselorInput.value = chip.dataset.text;
+          counselorInput.focus();
+        });
+      });
+
+      // Counselor Authentication Logic
+      function checkCounselorAuth() {
+        const stored = localStorage.getItem('mindmate_counselor');
+        if (stored) {
+          try {
+            const counselor = JSON.parse(stored);
+            counselorNameDisplay.textContent = counselor.name || 'Counselor Staff';
+            counselorIdDisplay.textContent = `ID: ${counselor.employee_id}`;
+            counselorAuthModal.classList.remove('active');
+            return true;
+          } catch(e) {}
+        }
+        counselorAuthModal.classList.add('active');
+        return false;
+      }
+
+      function resetCounselorWorkspace() {
+        for (const [sid, ws] of counselorSockets.entries()) {
+          try {
+            ws.onclose = null;
+            ws.close();
+          } catch(e) {}
+        }
+        counselorSockets.clear();
+        unreadSessionMessages.clear();
+        currentSessionId = null;
+        activeSessionWorkspace.style.display = 'none';
+        consoleEmptyState.style.display = 'flex';
+        consoleMessages.innerHTML = '';
+        activeSessionTitle.textContent = 'Select a Session';
+        counselorInput.value = '';
+        counselorWsDot.className = 'status-dot offline';
+        counselorWsText.textContent = 'Disconnected';
+        if (btnStopSos) btnStopSos.style.display = 'none';
+      }
+
+      if (btnCounselorLogout) {
+        btnCounselorLogout.addEventListener('click', () => {
+          localStorage.removeItem('mindmate_counselor');
+          stopQueuePolling();
+          resetCounselorWorkspace();
+          checkCounselorAuth();
+        });
+      }
+
+      document.querySelectorAll('.demo-counselor-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          counselorLoginId.value = btn.dataset.id;
+          counselorLoginPass.value = btn.dataset.pass;
+          counselorLoginForm.dispatchEvent(new Event('submit'));
+        });
+      });
+
+      if (counselorLoginForm) {
+        counselorLoginForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const empId = counselorLoginId.value.trim();
+          const pass = counselorLoginPass.value.trim();
+          if (!empId || !pass) return;
+
+          try {
+            const res = await fetch('/api/v1/auth/counselor/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ employee_id: empId, password: pass })
+            });
+            if (res.ok) {
+              const data = await res.json();
+              localStorage.setItem('mindmate_counselor', JSON.stringify(data.counselor));
+              resetCounselorWorkspace();
+              showToast(`Logged in as ${data.counselor.name}`, 'success');
+              if (checkCounselorAuth()) {
+                startQueuePolling();
+              }
+            } else {
+              const err = await res.json();
+              showToast(err.detail || 'Invalid Counselor credentials', 'danger');
+            }
+          } catch(e) {
+            showToast('Failed to connect to authentication server', 'danger');
+          }
+        });
+      }
+
+      let alertedSosSessions = new Set();
+      let queuePollInterval = null;
+      let isInitialQueueLoad = true;
+
+      // Fetch live escalation queue from backend API
+      async function fetchTriageQueue() {
+        if (!checkCounselorAuth()) return;
+        try {
+          const res = await fetch('/api/v1/hitl/queue');
+          if (res.ok) {
+            const data = await res.json();
+            sessionsMap.clear();
+
+            if (isInitialQueueLoad) {
+              // Initial load upon opening page: register all existing sessions WITHOUT sirens/popups
+              data.forEach(item => {
+                sessionsMap.set(item.id, {
+                  id: item.id,
+                  status: item.status,
+                  preview: item.preview || 'Escalated Session',
+                  timestamp: item.created_at ? new Date(item.created_at) : new Date()
+                });
+                if (item.status === 'CRITICAL_SOS') {
+                  alertedSosSessions.add(item.id);
+                }
+              });
+              isInitialQueueLoad = false;
+              renderQueue();
+              return;
+            }
+
+            data.forEach(item => {
+              sessionsMap.set(item.id, {
+                id: item.id,
+                status: item.status,
+                preview: item.preview || 'Escalated Session',
+                timestamp: item.created_at ? new Date(item.created_at) : new Date()
+              });
+
+              // Alert ONLY on brand new SOS events dispatched while counselor is running
+              if (item.status === 'CRITICAL_SOS' && !alertedSosSessions.has(item.id)) {
+                alertedSosSessions.add(item.id);
+                if (currentSessionId !== item.id) {
+                  playAudioAlert('sos');
+                  showToast(`🚨 CRITICAL SOS ALERT: Session #${item.id} requires immediate emergency dispatch!`, 'danger', 12000);
+                } else {
+                  activeStatusBadge.className = 'badge badge-tier3';
+                  activeStatusBadge.textContent = 'Emergency SOS';
+                  if (btnStopSos) btnStopSos.style.display = 'inline-flex';
+                }
+              }
+            });
+            renderQueue();
+          }
+        } catch (e) {
+          console.warn('Queue fetch error:', e);
+        }
+      }
+
+      function startQueuePolling() {
+        if (queuePollInterval) clearInterval(queuePollInterval);
+        isInitialQueueLoad = true;
+        fetchTriageQueue();
+        queuePollInterval = setInterval(fetchTriageQueue, 2500);
+      }
+
+      function stopQueuePolling() {
+        if (queuePollInterval) {
+          clearInterval(queuePollInterval);
+          queuePollInterval = null;
+        }
+      }
+
+      // Start queue polling ONLY if already authenticated
+      if (checkCounselorAuth()) {
+        startQueuePolling();
+      }
+
+      // Check if session_id is in URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const initialParamId = urlParams.get('session_id');
+      if (initialParamId && checkCounselorAuth()) {
+        selectAndJoinSession(parseInt(initialParamId));
+      }
+
+      // Render Queue UI
+      function renderQueue() {
+        queueList.innerHTML = '';
+
+        let awaiting = 0;
+        let active = 0;
+        let total = 0;
+
+        const filteredList = [];
+
+        sessionsMap.forEach((session) => {
+          total++;
+          if (session.status === 'AWAITING_COUNSELOR' || session.status === 'CRITICAL_SOS') awaiting++;
+          if (session.status === 'LIVE_COUNSELOR') active++;
+
+          if (activeFilter === 'AWAITING' && session.status !== 'AWAITING_COUNSELOR' && session.status !== 'CRITICAL_SOS') return;
+          if (activeFilter === 'ACTIVE' && session.status !== 'LIVE_COUNSELOR') return;
+
+          filteredList.push(session);
+        });
+
+        // Always prioritize CRITICAL_SOS at the very top of queue
+        filteredList.sort((a, b) => {
+          if (a.status === 'CRITICAL_SOS' && b.status !== 'CRITICAL_SOS') return -1;
+          if (b.status === 'CRITICAL_SOS' && a.status !== 'CRITICAL_SOS') return 1;
+          return b.timestamp - a.timestamp;
+        });
+
+        awaitingCount.textContent = awaiting;
+        activeCount.textContent = active;
+        allCount.textContent = total;
+
+        if (filteredList.length === 0) {
+          queueList.appendChild(queueEmptyState);
+          queueEmptyState.style.display = 'block';
+          return;
+        }
+
+        queueEmptyState.style.display = 'none';
+
+        filteredList.forEach(session => {
+          const card = document.createElement('div');
+          const isSelected = currentSessionId === session.id;
+          const isCritical = session.status === 'CRITICAL_SOS';
+          const isAwaiting = session.status === 'AWAITING_COUNSELOR';
+          const hasUnread = unreadSessionMessages.has(session.id);
+
+          card.className = `session-card ${isSelected ? 'active' : ''} ${isCritical ? 'critical' : isAwaiting ? 'urgent' : ''}`;
+          
+          let statusBadgeClass = 'badge-tier2';
+          let statusLabel = 'Awaiting';
+          if (session.status === 'CRITICAL_SOS') {
+            statusBadgeClass = 'badge-tier3';
+            statusLabel = 'Emergency SOS';
+          } else if (session.status === 'LIVE_COUNSELOR') {
+            statusBadgeClass = 'badge-info';
+            statusLabel = 'Human Counselor';
+          }
+
+          card.innerHTML = `
+            <div class="card-top">
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span class="card-session-id">Session #${session.id}</span>
+                ${hasUnread ? '<span style="background: #10b981; color: #022c22; font-size: 0.62rem; font-weight: 800; padding: 1px 6px; border-radius: 6px;">● NEW MSG</span>' : ''}
+              </div>
+              <span class="badge ${statusBadgeClass}" style="font-size: 0.68rem; padding: 2px 6px;">
+                ${statusLabel}
+              </span>
+            </div>
+            <div class="card-body">
+              <span class="card-preview">${escapeHTML(session.preview)}</span>
+            </div>
+            <div class="card-footer">
+              <span class="card-time mono">${formatTime(session.timestamp)}</span>
+              <button class="btn btn-primary join-session-btn" style="padding: 4px 10px; font-size: 0.72rem;">
+                ${isSelected ? '✓ In Session' : 'Join Chat →'}
+              </button>
+            </div>
+          `;
+
+          card.addEventListener('click', () => {
+            selectAndJoinSession(session.id);
+          });
+
+          queueList.appendChild(card);
+        });
+      }
+
+      // Filter button handlers
+      filterAwaiting.addEventListener('click', () => {
+        activeFilter = 'AWAITING';
+        filterAwaiting.classList.add('active');
+        filterActive.classList.remove('active');
+        filterAll.classList.remove('active');
+        renderQueue();
+      });
+
+      filterActive.addEventListener('click', () => {
+        activeFilter = 'ACTIVE';
+        filterActive.classList.add('active');
+        filterAwaiting.classList.remove('active');
+        filterAll.classList.remove('active');
+        renderQueue();
+      });
+
+      filterAll.addEventListener('click', () => {
+        activeFilter = 'ALL';
+        filterAll.classList.add('active');
+        filterAwaiting.classList.remove('active');
+        filterActive.classList.remove('active');
+        renderQueue();
+      });
+
+      // Manual join by ID
+      manualJoinBtn.addEventListener('click', async () => {
+        const val = manualJoinInput.value.trim();
+        if (!val || isNaN(val) || parseInt(val) <= 0) {
+          showToast('Please enter a valid numeric session ID.', 'warning');
+          return;
+        }
+        const sid = parseInt(val);
+
+        // Pre-check session privacy before connecting
+        try {
+          const res = await fetch(`/api/v1/sessions/${sid}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status === 'LIVE_BOT') {
+              showToast(`⛔ Access Denied: Session #${sid} is in confidential AI companion mode (Tier 1). Counselors cannot join unescalated chats.`, 'danger', 8000);
+              return;
+            }
+          } else if (res.status === 404) {
+            showToast(`Session #${sid} does not exist in database.`, 'warning');
+            return;
+          }
+        } catch (e) {
+          console.warn('Pre-check error:', e);
+        }
+
+        selectAndJoinSession(sid);
+      });
+
+      manualJoinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') manualJoinBtn.click();
+      });
+
+      // =========================================================================
+      // DYNAMIC MULTI-SESSION COUNSELOR WEBSOCKET CONNECTION MANAGER
+      // =========================================================================
+      function connectCounselorToSession(sessionId) {
+        if (counselorSockets.has(sessionId)) {
+          const existingWs = counselorSockets.get(sessionId);
+          if (existingWs.readyState === WebSocket.OPEN || existingWs.readyState === WebSocket.CONNECTING) {
+            return;
+          }
+        }
+
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/counselor/${sessionId}`;
+        console.log(`Counselor connecting to session #${sessionId}:`, wsUrl);
+
+        if (sessionId === currentSessionId) {
+          counselorWsDot.className = 'status-dot connecting';
+          counselorWsText.textContent = 'Connecting...';
+        }
+
+        try {
+          const socket = new WebSocket(wsUrl);
+          counselorSockets.set(sessionId, socket);
+
+          socket.onopen = () => {
+            console.log(`Counselor connected to session #${sessionId}`);
+            if (sessionId === currentSessionId) {
+              counselorWsDot.className = 'status-dot online';
+              counselorWsText.textContent = 'Active Counselor Connected';
+              showToast(`Joined Session #${sessionId}`, 'success');
+
+              const sess = sessionsMap.get(sessionId);
+              if (sess && sess.status === 'CRITICAL_SOS') {
+                activeStatusBadge.className = 'badge badge-tier3';
+                activeStatusBadge.textContent = 'Emergency SOS';
+                if (btnStopSos) btnStopSos.style.display = 'inline-flex';
+              } else {
+                activeStatusBadge.className = 'badge badge-info';
+                activeStatusBadge.textContent = 'Human Counselor';
+              }
+
+              counselorInput.disabled = false;
+              counselorInput.placeholder = 'Type your clinical response... (Enter to send)';
+              const sendBtn = document.getElementById('counselorSendBtn');
+              if (sendBtn) sendBtn.disabled = false;
+              counselorInput.focus();
+            }
+            fetchTriageQueue();
+          };
+
+          socket.onmessage = (event) => {
+            handleCounselorIncomingMessage(sessionId, event.data);
+          };
+
+          socket.onerror = (err) => {
+            console.warn(`Counselor WebSocket error for session #${sessionId}:`, err);
+          };
+
+          socket.onclose = (event) => {
+            console.log(`Counselor WebSocket closed for session #${sessionId}:`, event.code, event.reason);
+            counselorSockets.delete(sessionId);
+            if (sessionId === currentSessionId) {
+              counselorWsDot.className = 'status-dot offline';
+              counselorWsText.textContent = 'Disconnected';
+            }
+          };
+        } catch (e) {
+          console.error(`Error creating Counselor WebSocket for session #${sessionId}:`, e);
+          counselorSockets.delete(sessionId);
+          if (sessionId === currentSessionId) {
+            counselorWsDot.className = 'status-dot offline';
+            counselorWsText.textContent = 'Failed to connect';
+          }
+        }
+      }
+
+      async function selectAndJoinSession(sessionId) {
+        currentSessionId = sessionId;
+        unreadSessionMessages.delete(sessionId);
+        renderQueue();
+
+        // Switch UI to active workspace
+        consoleEmptyState.style.display = 'none';
+        activeSessionWorkspace.style.display = 'flex';
+        activeSessionTitle.textContent = `Student Session #${sessionId}`;
+
+        const existingSession = sessionsMap.get(sessionId);
+        if (existingSession && existingSession.status === 'CRITICAL_SOS') {
+          activeStatusBadge.className = 'badge badge-tier3';
+          activeStatusBadge.textContent = 'Emergency SOS';
+          if (btnStopSos) btnStopSos.style.display = 'inline-flex';
+        } else {
+          activeStatusBadge.className = 'badge badge-info';
+          activeStatusBadge.textContent = 'Human Counselor';
+          if (btnStopSos) btnStopSos.style.display = 'none';
+        }
+
+        // Clear and load messages
+        consoleMessages.innerHTML = '';
+
+        // Fetch clinical transcript
+        try {
+          const transcriptRes = await fetch(`/api/v1/hitl/session/${sessionId}/transcript`);
+          if (transcriptRes.ok) {
+            const transcriptData = await transcriptRes.json();
+            if (transcriptData.status === 'CRITICAL_SOS') {
+              activeStatusBadge.className = 'badge badge-tier3';
+              activeStatusBadge.textContent = 'Emergency SOS';
+              if (btnStopSos) btnStopSos.style.display = 'inline-flex';
+            }
+            if (transcriptData.messages && transcriptData.messages.length > 0) {
+              transcriptData.messages.forEach(msg => {
+                if (msg.sender === 'STUDENT') {
+                  appendStudentScrubbedMessage(msg.content, msg.timestamp);
+                } else if (msg.sender === 'COUNSELOR') {
+                  appendCounselorMessage(msg.content, msg.timestamp);
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Could not load clinical transcript:', e);
+        }
+
+        // Connect or reuse existing active WebSocket for this session
+        const existingWs = counselorSockets.get(sessionId);
+        if (existingWs && existingWs.readyState === WebSocket.OPEN) {
+          counselorWsDot.className = 'status-dot online';
+          counselorWsText.textContent = 'Active Counselor Connected';
+          counselorInput.disabled = false;
+          counselorInput.placeholder = 'Type your clinical response... (Enter to send)';
+          const sendBtn = document.getElementById('counselorSendBtn');
+          if (sendBtn) sendBtn.disabled = false;
+          counselorInput.focus();
+        } else {
+          connectCounselorToSession(sessionId);
+        }
+      }
+
+      // Handle Incoming WebSocket messages from backend
+      function handleCounselorIncomingMessage(fromSessionId, rawData) {
+        let data;
+        try {
+          data = JSON.parse(rawData);
+        } catch (e) {
+          data = { sender: 'STUDENT', content: rawData };
+        }
+
+        const isCurrent = fromSessionId === currentSessionId;
+
+        // Session State sync
+        if (data.event === 'SESSION_STATE') {
+          if (isCurrent) {
+            if (data.status === 'CRITICAL_SOS') {
+              activeStatusBadge.className = 'badge badge-tier3';
+              activeStatusBadge.textContent = 'Emergency SOS';
+              if (btnStopSos) btnStopSos.style.display = 'inline-flex';
+            } else if (data.status === 'LIVE_COUNSELOR') {
+              activeStatusBadge.className = 'badge badge-info';
+              activeStatusBadge.textContent = 'Human Counselor';
+              if (btnStopSos) btnStopSos.style.display = 'none';
+            }
+          }
+          fetchTriageQueue();
+          return;
+        }
+
+        // Privacy Rejection Check
+        if (data.event === 'ACCESS_DENIED') {
+          if (isCurrent) {
+            showToast(`⛔ ${data.detail || 'Access Denied: Private AI companion session.'}`, 'danger', 9000);
+            appendSystemConsoleMessage(`⛔ ${data.detail || 'Access Denied: Unescalated confidential session.'}`);
+            counselorWsDot.className = 'status-dot offline';
+            counselorWsText.textContent = 'Access Denied';
+            setTimeout(() => {
+              activeSessionWorkspace.style.display = 'none';
+              consoleEmptyState.style.display = 'flex';
+              currentSessionId = null;
+            }, 2000);
+          }
+          return;
+        }
+
+        // Student voluntarily switched back to AI Companion mode
+        if (data.event === 'STUDENT_RETURNED_TO_BOT') {
+          playAudioAlert('alert');
+          if (isCurrent) {
+            showToast('⚠️ Student switched back to AI Companion mode. Session closed.', 'warning', 8000);
+            appendSystemConsoleMessage('⚠️ The student has voluntarily switched back to Mind-Mate AI Companion mode. This counseling session is now closed.');
+
+            activeStatusBadge.className = 'badge badge-tier1';
+            activeStatusBadge.textContent = 'RETURNED TO BOT';
+
+            counselorInput.disabled = true;
+            counselorInput.placeholder = 'Student returned to AI Companion. Chat closed.';
+            const sendBtn = document.getElementById('counselorSendBtn');
+            if (sendBtn) sendBtn.disabled = true;
+
+            const exitCard = document.createElement('div');
+            exitCard.className = 'message-row system';
+            exitCard.innerHTML = `
+              <div class="system-notice" style="background: rgba(99, 102, 241, 0.15); border-left: 3px solid var(--indigo-400); justify-content: space-between; width: 100%;">
+                <span>Counseling intervention concluded by student.</span>
+                <button id="closeWorkspaceBtn" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 10px;">Close Workspace ✕</button>
+              </div>
+            `;
+            consoleMessages.appendChild(exitCard);
+            scrollConsoleBottom();
+
+            const closeBtn = document.getElementById('closeWorkspaceBtn');
+            if (closeBtn) {
+              closeBtn.addEventListener('click', closeActiveWorkspace);
+            }
+          } else {
+            showToast(`ℹ️ Session #${fromSessionId}: Student switched back to AI companion mode.`, 'info', 6000);
+          }
+
+          const ws = counselorSockets.get(fromSessionId);
+          if (ws) {
+            try {
+              ws.onclose = null;
+              ws.close();
+            } catch(e) {}
+            counselorSockets.delete(fromSessionId);
+          }
+          fetchTriageQueue();
+          return;
+        }
+
+        // Critical SOS Emergency Alert (Real-time trigger during chat)
+        if (data.event === 'CRITICAL_SOS_TRIGGERED') {
+          if (isCurrent && activeStatusBadge.textContent === 'Emergency SOS') {
+            return;
+          }
+          playAudioAlert('sos');
+          showToast(`🚨 CRITICAL SOS on Session #${fromSessionId}: Immediate dispatch required!`, 'danger', 12000);
+          if (isCurrent) {
+            appendSystemConsoleMessage('🚨 CRITICAL SOS: Emergency dispatch protocol activated.');
+            activeStatusBadge.className = 'badge badge-tier3';
+            activeStatusBadge.textContent = 'Emergency SOS';
+            if (btnStopSos) btnStopSos.style.display = 'inline-flex';
+            openSosModal();
+          }
+          fetchTriageQueue();
+          return;
+        }
+
+        // SOS Resolved Event (When counselor stops the SOS)
+        if (data.event === 'SOS_RESOLVED') {
+          if (isCurrent) {
+            activeStatusBadge.className = 'badge badge-info';
+            activeStatusBadge.textContent = 'Human Counselor';
+            if (btnStopSos) btnStopSos.style.display = 'none';
+            if (sosModal) sosModal.classList.remove('active');
+            appendSystemConsoleMessage('✅ Emergency SOS protocol closed. The incident has been handled, and the student remains in safe counselor communication.');
+          }
+          fetchTriageQueue();
+          return;
+        }
+
+        // Triage Escalation Alert
+        if (data.event === 'NEW_MODERATE_RISK') {
+          playAudioAlert('alert');
+          showToast(`⚠️ Session #${data.session_id || fromSessionId}: Triage Escalation Alert!`, 'warning', 6000);
+          if (isCurrent) {
+            appendSystemConsoleMessage('⚠️ Automated Alert: Risk detected in student conversation. Counselor intervention requested.');
+          }
+          fetchTriageQueue();
+          return;
+        }
+
+        if (data.event === 'SESSION_RESOLVED') {
+          fetchTriageQueue();
+          return;
+        }
+
+        if (data.event === 'STUDENT_OFFLINE') {
+          if (isCurrent) {
+            appendSystemConsoleMessage(`ℹ️ ${data.detail || 'Student is currently reconnecting. Your message has been saved.'}`);
+          }
+          return;
+        }
+
+        // Student scrubbed message: {"sender": "STUDENT", "content": scrubbed_text}
+        if (data.sender === 'STUDENT') {
+          if (isCurrent) {
+            appendStudentScrubbedMessage(data.content);
+            playAudioAlert('chime');
+          } else {
+            unreadSessionMessages.add(fromSessionId);
+            playAudioAlert('chime');
+            showToast(`💬 Session #${fromSessionId}: New message from student!`, 'info', 6000);
+          }
+          renderQueue();
+          fetchTriageQueue();
+        }
+      }
+
+      function closeActiveWorkspace() {
+        if (currentSessionId) {
+          const ws = counselorSockets.get(currentSessionId);
+          if (ws) {
+            try {
+              ws.onclose = null;
+              ws.close();
+            } catch(e) {}
+            counselorSockets.delete(currentSessionId);
+          }
+          unreadSessionMessages.delete(currentSessionId);
+        }
+        currentSessionId = null;
+        activeSessionWorkspace.style.display = 'none';
+        consoleEmptyState.style.display = 'flex';
+        counselorInput.disabled = false;
+        counselorInput.placeholder = 'Type your clinical response... (Enter to send)';
+        const sendBtn = document.getElementById('counselorSendBtn');
+        if (sendBtn) sendBtn.disabled = false;
+        fetchTriageQueue();
+      }
+
+      // Append scrubbed student message with high-visibility PII tags
+      function appendStudentScrubbedMessage(text, timestamp) {
+        const row = document.createElement('div');
+        row.className = 'message-row student';
+        row.style.alignItems = 'flex-start';
+        
+        const renderedHtml = highlightPIITags(text);
+
+        row.innerHTML = `
+          <div class="message-bubble" style="background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-medium); border-bottom-left-radius: var(--radius-sm); border-bottom-right-radius: var(--radius-lg);">
+            <div class="message-sender-tag" style="color: var(--teal-400);">
+              <span>👤</span>
+              <span>Student</span>
+            </div>
+            <div class="message-text">${renderedHtml}</div>
+            <span class="message-time" style="color: var(--text-muted); text-align: left;">${formatTime(timestamp)}</span>
+          </div>
+        `;
+        consoleMessages.appendChild(row);
+        scrollConsoleBottom();
+      }
+
+      // Append counselor message (locally sent)
+      function appendCounselorMessage(text, timestamp) {
+        const row = document.createElement('div');
+        row.className = 'message-row counselor';
+        row.style.alignItems = 'flex-end';
+
+        row.innerHTML = `
+          <div class="message-bubble" style="background: linear-gradient(135deg, var(--indigo-600), #4338ca); color: white; border-bottom-right-radius: var(--radius-sm);">
+            <div class="message-sender-tag" style="color: #c7d2fe; justify-content: flex-end;">
+              <span>You (Counselor)</span>
+              <span>🩺</span>
+            </div>
+            <div class="message-text">${escapeHTML(text)}</div>
+            <span class="message-time" style="color: rgba(255, 255, 255, 0.65);">${formatTime(timestamp)} ✓</span>
+          </div>
+        `;
+        consoleMessages.appendChild(row);
+        scrollConsoleBottom();
+      }
+
+      function appendSystemConsoleMessage(text) {
+        const row = document.createElement('div');
+        const isEmergency = text.toLowerCase().includes('critical sos') || text.toLowerCase().includes('emergency');
+        row.className = `message-row system ${isEmergency ? 'sos' : ''}`;
+        row.innerHTML = `
+          <div class="system-notice">
+            ${escapeHTML(text)}
+          </div>
+        `;
+        consoleMessages.appendChild(row);
+        scrollConsoleBottom();
+      }
+
+      function scrollConsoleBottom() {
+        consoleMessages.scrollTop = consoleMessages.scrollHeight;
+      }
+
+      // Send Counselor Message
+      composerForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = counselorInput.value.trim();
+        if (!text) return;
+
+        const activeSocket = counselorSockets.get(currentSessionId);
+        if (!activeSocket || activeSocket.readyState !== WebSocket.OPEN) {
+          showToast('WebSocket is not connected. Re-joining session...', 'warning');
+          connectCounselorToSession(currentSessionId);
+          return;
+        }
+
+        // Render locally
+        appendCounselorMessage(text);
+        counselorInput.value = '';
+
+        // Send to backend
+        activeSocket.send(text);
+      });
+
+      // =========================================================================
+      // THE SOS "BREAK-GLASS" BUTTON & EMERGENCY DISPATCH MODAL
+      // =========================================================================
+      let cachedDispatchData = null;
+      const closeSosModalTopBtn = document.getElementById('closeSosModalTopBtn');
+
+      function renderSosModalData(data) {
+        if (!data) return;
+        cachedDispatchData = data;
+        unmaskedName.textContent = data.student_name || 'N/A';
+        unmaskedRegNo.textContent = data.reg_no || 'N/A';
+        unmaskedLocation.textContent = data.location || 'N/A';
+        unmaskedPhone.textContent = data.phone || 'N/A';
+        if (unmaskedEmail) unmaskedEmail.textContent = data.email || 'N/A';
+        if (data.phone) callSecurityBtn.href = `tel:${data.phone}`;
+      }
+
+      async function openSosModal() {
+        if (!currentSessionId) return;
+        try {
+          const response = await fetch(`/api/v1/hitl/sos/details/${encodeURIComponent(currentSessionId)}`);
+          if (response.ok) {
+            const data = await response.json();
+            renderSosModalData(data);
+          }
+        } catch(e) {
+          console.warn('Could not fetch SOS details:', e);
+        }
+        sosModal.classList.add('active');
+      }
+
+      async function handleStopSos() {
+        if (!currentSessionId) return;
+
+        const confirmed = confirm(
+          `🛑 CLOSE EMERGENCY SOS INCIDENT\n\n` +
+          `Are you sure you want to stop the critical SOS for Session #${currentSessionId}?\n\n` +
+          `This will:\n` +
+          `1. De-escalate the session from Emergency SOS back to active counselor communication.\n` +
+          `2. Notify the student that the emergency incident has been resolved and they are safe.\n` +
+          `3. Update the clinical triage queue.`
+        );
+
+        if (!confirmed) return;
+
+        try {
+          const res = await fetch(`/api/v1/hitl/sos/close/${currentSessionId}`, {
+            method: 'POST'
+          });
+
+          if (res.ok) {
+            showToast(`✅ Session #${currentSessionId}: Emergency SOS stopped. Matter closed.`, 'success', 6000);
+            
+            if (sosModal) sosModal.classList.remove('active');
+
+            activeStatusBadge.className = 'badge badge-info';
+            activeStatusBadge.textContent = 'Human Counselor';
+            if (btnStopSos) btnStopSos.style.display = 'none';
+
+            appendSystemConsoleMessage('✅ Emergency SOS protocol closed. The incident has been handled, and the student remains in safe counselor communication.');
+
+            fetchTriageQueue();
+          } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.detail || 'Could not close SOS incident', 'danger');
+          }
+        } catch (e) {
+          console.error('Stop SOS error:', e);
+          showToast('Failed to communicate with triage server', 'danger');
+        }
+      }
+
+      if (btnStopSos) {
+        btnStopSos.addEventListener('click', handleStopSos);
+      }
+      if (btnModalStopSos) {
+        btnModalStopSos.addEventListener('click', handleStopSos);
+      }
+
+      btnSosUnmask.addEventListener('click', async () => {
+        if (!currentSessionId) {
+          showToast('No active session selected.', 'warning');
+          return;
+        }
+
+        // If session is already in Emergency SOS state, just open the modal with the details
+        if (activeStatusBadge.textContent === 'Emergency SOS') {
+          await openSosModal();
+          return;
+        }
+
+        const confirmed = confirm(
+          `⚠️ EMERGENCY DISPATCH CONFIRMATION\n\n` +
+          `You are about to initiate emergency dispatch for Session #${currentSessionId}.\n` +
+          `This action will:\n` +
+          `1. Retrieve emergency student location and contact details.\n` +
+          `2. Alert campus emergency response.\n` +
+          `3. Keep the chat live so you can continue supporting the student.\n\n` +
+          `Do you want to proceed?`
+        );
+
+        if (!confirmed) return;
+
+        btnSosUnmask.disabled = true;
+        btnSosUnmask.innerHTML = '<span>⏳ DISPATCHING...</span>';
+
+        try {
+          const response = await fetch(`/api/v1/hitl/sos/unmask/${encodeURIComponent(currentSessionId)}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            renderSosModalData(data);
+            sosModal.classList.add('active');
+          }
+
+          playAudioAlert('sos');
+
+          activeStatusBadge.className = 'badge badge-tier3';
+          activeStatusBadge.textContent = 'Emergency SOS';
+          if (btnStopSos) btnStopSos.style.display = 'inline-flex';
+
+          // Ensure counselor input is ready for active dialogue
+          counselorInput.disabled = false;
+          const sendBtn = document.getElementById('counselorSendBtn');
+          if (sendBtn) sendBtn.disabled = false;
+
+          appendSystemConsoleMessage('🚨 CRITICAL SOS PROTOCOL ACTIVATED: Emergency dispatch initiated.');
+          showToast('🚨 CRITICAL SOS: Emergency dispatch initiated!', 'danger', 8000);
+          fetchTriageQueue();
+
+        } catch (err) {
+          console.error('Failed to trigger SOS dispatch:', err);
+          showToast(`Error triggering SOS dispatch: ${err.message}`, 'danger', 6000);
+        } finally {
+          btnSosUnmask.disabled = false;
+          btnSosUnmask.innerHTML = '<span class="sos-icon">🚨</span><span>Emergency Dispatch</span>';
+        }
+      });
+
+      // Modal action handlers (Allow easy close so counselor can chat)
+      if (closeSosModalBtn) {
+        closeSosModalBtn.addEventListener('click', () => {
+          sosModal.classList.remove('active');
+        });
+      }
+      if (closeSosModalTopBtn) {
+        closeSosModalTopBtn.addEventListener('click', () => {
+          sosModal.classList.remove('active');
+        });
+      }
+      sosModal.addEventListener('click', (e) => {
+        if (e.target === sosModal) {
+          sosModal.classList.remove('active');
+        }
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sosModal.classList.contains('active')) {
+          sosModal.classList.remove('active');
+        }
+      });
+
+      copyDispatchBtn.addEventListener('click', () => {
+        if (!cachedDispatchData) return;
+        const text = 
+          `[MIND-MATE EMERGENCY DISPATCH TICKET]\n` +
+          `Session ID: #${currentSessionId}\n` +
+          `Student Name: ${cachedDispatchData.student_name}\n` +
+          `Registration No: ${cachedDispatchData.reg_no}\n` +
+          `Location: ${cachedDispatchData.location}\n` +
+          `Phone: ${cachedDispatchData.phone}\n` +
+          `Timestamp: ${new Date().toISOString()}\n` +
+          `Alert Level: CRITICAL_SOS`;
+        copyToClipboard(text, 'Dispatch ticket copied to clipboard!');
+      });
+    });
+  </script>
+</body>
+</html>
