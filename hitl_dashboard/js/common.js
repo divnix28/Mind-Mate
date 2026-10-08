@@ -36,10 +36,14 @@ function escapeHTML(str) {
 function highlightPIITags(text) {
   if (!text) return '';
   const escaped = escapeHTML(text);
-  // Match tokens like [HOSTEL_BLOCK], [PERSON], [PHONE_NUMBER], [ROOM], [EMAIL], [REDACTED]
-  return escaped.replace(/\[([A-Z0-9_\-\s]{2,30})\]/g, (match, tokenName) => {
-    return `<span class="pii-tag" title="Anonymized by Presidio PII Engine">[${tokenName}]</span>`;
-  });
+  // Match tokens like [HOSTEL_BLOCK], [PERSON] or sequences of asterisks *****
+  return escaped
+    .replace(/\[([A-Z0-9_\-\s]{2,30})\]/g, () => {
+      return `<span class="pii-tag" title="Anonymized">*****</span>`;
+    })
+    .replace(/\*{4,}/g, () => {
+      return `<span class="pii-tag" title="Anonymized">*****</span>`;
+    });
 }
 
 /**

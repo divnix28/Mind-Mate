@@ -63,16 +63,16 @@ class PIIAnonymizer:
             "Sumit", "Sunil", "Suraj", "Suresh", "Surya", "Swapnil", "Swati", "Tanmay", "Tanvi",
             "Tarun", "Tejas", "Tushar", "Umesh", "Utkarsh", "Vaibhav", "Varun", "Vicky", "Vidya",
             "Vihan", "Vihaan", "Vijay", "Vikas", "Vinay", "Vinod", "Vipul", "Vishal", "Vivek", "Yash", "Yuvraj",
-            "vihan", "vihaan", "varun", "rahul", "rohan", "priya", "aarav", "divyanshu", "siddhesh", "amit", "alex", "david"
+            "vihan", "vihaan", "varun", "rahul", "rohan", "priya", "aarav", "divyanshu", "siddhesh", "amit", "alex", "david", "Vedant", "vedant"
         ]
         self.analyzer.registry.add_recognizer(
             PatternRecognizer(supported_entity="PERSON", deny_list=indian_names)
         )
 
-        # 1c. Name Introduction Context Recognizer (Catches any name after "my name is", "i am", "call me", etc.)
+        # 1c. Name Introduction Context Recognizer (Only catches explicit name declarations like "my name is Vedant", "call me Alex")
         name_intro_pattern = Pattern(
             name="name_intro_lookbehind",
-            regex=r"(?i)(?<=\bmy name is\s)[a-zA-Z]{2,25}\b|(?<=\bi am\s)[a-zA-Z]{2,25}\b|(?<=\bi\'m\s)[a-zA-Z]{2,25}\b|(?<=\bthis is\s)[a-zA-Z]{2,25}\b|(?<=\bcall me\s)[a-zA-Z]{2,25}\b|(?<=\bmyself\s)[a-zA-Z]{2,25}\b|(?<=\bname is\s)[a-zA-Z]{2,25}\b",
+            regex=r"(?i)(?<=\bmy name is\s)[a-zA-Z]{2,25}\b|(?<=\bcall me\s)[a-zA-Z]{2,25}\b|(?<=\bname is\s)[a-zA-Z]{2,25}\b",
             score=0.95
         )
         self.analyzer.registry.add_recognizer(
@@ -104,10 +104,10 @@ class PIIAnonymizer:
         )
 
         # 4. New: Room Number Recognizer
-        # Explicit catches "Room 405", Implicit catches "D-104" (relies on context words to boost score)
+        # Explicit catches "Room 405", "room number is 48", "room number 48"
         room_pattern_explicit = Pattern(
             name="room_number_explicit",
-            regex=r"(?i)\broom\s+[a-z]?[-\s]?\d{1,4}\b",
+            regex=r"(?i)\broom(?:\s+number)?(?:\s+is)?\s+[a-z]?[-\s]?\d{1,4}\b",
             score=0.85
         )
         room_pattern_implicit = Pattern(
@@ -156,7 +156,7 @@ class PIIAnonymizer:
         )
 
         operators = {
-            entity: OperatorConfig("replace", {"new_value": f"[{entity}]"}) 
+            entity: OperatorConfig("replace", {"new_value": "*****"}) 
             for entity in entities
         }
 

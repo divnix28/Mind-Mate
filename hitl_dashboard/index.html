@@ -19,9 +19,6 @@
       </div>
     </a>
     <div class="header-actions">
-      <div class="badge badge-tier1" id="systemStatusBadge">
-        <span class="status-dot online"></span> System Online
-      </div>
       <a href="counselor_dash.html" class="btn btn-secondary" id="navCounselorBtn">
         👩‍⚕️ Counselor Portal
       </a>
@@ -32,13 +29,9 @@
   <main class="landing-container">
     <!-- Hero Header -->
     <section class="hero-section">
-      <div class="hero-badge">
-        <span>🛡️ 3-Tier Multi-Agent Safety Architecture</span>
-      </div>
       <h1 class="hero-title">A Confidential Space for Student Well-Being</h1>
       <p class="hero-desc">
-        Mind-Mate combines empathetic real-time AI companionship with an automated Human-in-the-Loop (HITL) 
-        safety net to provide 24/7 campus mental health triage while strictly preserving student privacy.
+        Mind-Mate combines empathetic real-time AI companionship with campus counseling support for 24/7 student well-being.
       </p>
     </section>
 
@@ -50,14 +43,8 @@
           <div class="portal-icon-wrap">💬</div>
           <h2 class="portal-card-title">Student Support Portal</h2>
           <p class="portal-card-desc">
-            Connect directly with our real-time AI companion. Chat freely about academic stress, anxiety, 
-            or personal struggles. Your identity is automatically protected via real-time PII anonymization.
+            Connect directly with our real-time AI companion. Chat freely about academic stress, anxiety, or personal struggles.
           </p>
-          <ul class="feature-list">
-            <li><i>✓</i> <strong>100% Anonymous:</strong> Presidio PII scrubbing redacts names, hostels, and contacts</li>
-            <li><i>✓</i> <strong>Tier 1 Conversational AI:</strong> Immediate, empathetic, non-judgmental dialogue</li>
-            <li><i>✓</i> <strong>Seamless Counselor Escalation:</strong> Automated handoff if elevated risk is detected</li>
-          </ul>
         </div>
         <div>
           <button id="btnStartChat" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 1rem;">
@@ -76,14 +63,8 @@
           <div class="portal-icon-wrap">🩺</div>
           <h2 class="portal-card-title">Counselor & HITL Console</h2>
           <p class="portal-card-desc">
-            Dedicated workspace for certified campus counselors and mental health professionals. Monitor incoming 
-            escalations, join live chats with scrubbed transcripts, and activate emergency dispatch protocols.
+            Dedicated workspace for certified campus counselors to monitor incoming escalations and join live chats.
           </p>
-          <ul class="feature-list">
-            <li><i>✓</i> <strong>Live Triage Queue:</strong> Instant alerts for Tier 2 (Moderate) risk escalations</li>
-            <li><i>✓</i> <strong>Scrubbed Transcript Feed:</strong> Review student messages with preserved privacy</li>
-            <li><i>✓</i> <strong>Verified Break-Glass SOS:</strong> Cryptographically unmask PII for emergency response</li>
-          </ul>
         </div>
         <div>
           <a href="counselor_dash.html" class="btn btn-secondary" style="width: 100%; padding: 14px; font-size: 1rem; border-color: var(--indigo-500);">
@@ -96,19 +77,21 @@
       </article>
     </section>
 
-    <!-- Campus Emergency Helplines Bar -->
+    <!-- Campus & National Crisis Helplines Bar -->
     <section class="campus-helpline-bar">
       <div class="helpline-info">
         <span class="helpline-icon">🚨</span>
         <div>
-          <div class="helpline-title">Campus 24/7 Crisis Intervention Helplines</div>
-          <div class="helpline-sub">If you or someone you know is in immediate life-threatening danger, call directly:</div>
+          <div class="helpline-title">Campus &amp; National 24/7 Crisis Intervention Helplines</div>
+          <div class="helpline-sub">If you or someone you know needs urgent emotional or physical support, call directly free of charge:</div>
         </div>
       </div>
       <div class="helpline-numbers">
-        <div class="helpline-pill">📞 Tele-MANAS: 14416</div>
-        <div class="helpline-pill">🏥 Campus Clinic: Ext. 4444</div>
-        <div class="helpline-pill">🚨 Campus Emergency: Ext. 100</div>
+        <a href="tel:14416" class="helpline-pill" title="National Mental Health Helpline (Toll-Free, 24x7)">📞 Tele-MANAS: 14416 / 1800-891-4416</a>
+        <a href="tel:7560350913" class="helpline-pill" title="Campus Health & Wellness Center">🏥 Campus Health: 7560350913 (Ext. 4444)</a>
+        <a href="tel:100" class="helpline-pill" title="Campus Security & Emergency Response">🚨 Campus Security: Ext. 100</a>
+        <a href="tel:18005990019" class="helpline-pill" title="KIRAN National Helpline (Toll-Free, 24x7)">🤝 KIRAN: 1800-599-0019</a>
+        <a href="tel:08046110007" class="helpline-pill" title="NIMHANS Psychosocial Helpline">🧠 NIMHANS: 080-46110007</a>
       </div>
     </section>
   </main>
@@ -163,18 +146,6 @@
         });
       }
 
-      // Check backend health
-      fetch('/api/v1/health')
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.status) {
-            document.getElementById('systemStatusBadge').innerHTML = '<span class="status-dot online"></span> API Active';
-          }
-        })
-        .catch(() => {
-          document.getElementById('systemStatusBadge').innerHTML = '<span class="status-dot connecting"></span> Standalone Mode';
-        });
-
       // Secure Session Initiation: Click "Start Chat" triggers a REST call to backend
       startBtn.addEventListener('click', async () => {
         startBtn.disabled = true;
@@ -182,11 +153,22 @@
         statusText.textContent = 'Contacting backend to generate a secure session...';
 
         try {
-          // Attempt standard REST endpoints for session initiation
+          const storedStudent = localStorage.getItem('mindmate_student');
+          let studentId = null;
+          if (storedStudent) {
+            try { studentId = JSON.parse(storedStudent).id; } catch(e) {}
+          }
+
+          if (!studentId) {
+            // Forward to student_chat.html where login modal will appear
+            window.location.href = 'student_chat.html';
+            return;
+          }
+
           let response = await fetch('/api/v1/sessions/start', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ source: 'web_portal', timestamp: new Date().toISOString() })
+            body: JSON.stringify({ student_id: studentId })
           }).catch(() => null);
 
           // If the endpoint isn't mounted yet, attempt fallback route /api/v1/sessions

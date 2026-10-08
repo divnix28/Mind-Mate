@@ -23,7 +23,7 @@
         <div class="persona-details">
           <div class="persona-name">
             <span id="personaNameText">Mind-Mate Companion</span>
-            <span id="tierBadge" class="badge badge-tier1">Tier 1: AI Bot</span>
+            <span id="tierBadge" class="badge badge-tier2" style="display: none;">Human Counselor</span>
           </div>
           <div style="display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--text-muted);">
             <span id="wsStatusDot" class="status-dot connecting"></span>
@@ -36,6 +36,11 @@
     </div>
 
     <div class="header-actions" style="display: flex; align-items: center; gap: 8px;">
+      <div id="studentProfileBadge" style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; background: var(--bg-card); padding: 5px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+        <span>👤</span>
+        <span id="studentNameDisplay" style="font-weight: 700; color: var(--text-primary);">Student</span>
+        <button id="switchStudentBtn" class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.72rem; color: var(--text-muted);" title="Switch Account">Switch</button>
+      </div>
       <button id="newChatBtn" class="btn btn-secondary" style="font-size: 0.78rem; padding: 6px 12px;" title="Start a fresh confidential AI conversation">
         ✨ New Chat
       </button>
@@ -53,15 +58,6 @@
 
   <!-- Chat Messages Stream -->
   <main class="chat-messages-container" id="chatMessages">
-    <!-- Confidentiality & PII Notice Banner -->
-    <div class="chat-welcome-notice">
-      <h4>🔒 Confidential & Anonymized Session</h4>
-      <p>
-        Your identity is protected by automated Presidio PII scrubbing. 
-        Personal identifiers (such as your name, hostel room, and contact info) are masked in real time.
-      </p>
-    </div>
-
     <!-- Messages Container (populated dynamically) -->
     <div id="messagesList">
       <div class="message-row bot" id="defaultWelcomeRow">
@@ -82,15 +78,11 @@
 
   <!-- Chat Input Wrapper -->
   <footer class="chat-input-wrapper">
-    <!-- Frozen Emergency Notice (Hidden until SOS) -->
-    <div class="chat-frozen-banner" id="chatFrozenBanner">
-      <span style="font-size: 1.4rem;">🚨</span>
-      <div>
-        <div style="font-weight: 800;">EMERGENCY PROTOCOL ACTIVATED — CHAT LOCKED</div>
-        <div style="font-size: 0.8rem; opacity: 0.9;">
-          Help is on the way. Campus emergency services and medical staff have been alerted to your location. 
-          Please stay right where you are.
-        </div>
+    <!-- Gentle Emergency Support Notice (Calm and never locks the chat) -->
+    <div class="chat-support-banner" id="chatSupportBanner" style="display: none; align-items: center; gap: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 8px 14px; margin-bottom: 8px;">
+      <span style="font-size: 1.2rem;">🤝</span>
+      <div style="font-size: 0.8rem; color: #a7f3d0;">
+        <strong>Campus Support Active:</strong> In-person emergency assistance has been alerted. Your counselor remains live in this chat—please keep talking with them.
       </div>
     </div>
 
@@ -115,7 +107,7 @@
 
   <!-- Crisis Helplines Modal -->
   <div id="crisisModal" class="modal-overlay">
-    <div class="emergency-modal-card" style="border-color: #ef4444; max-width: 500px;">
+    <div class="emergency-modal-card" style="border-color: #ef4444; max-width: 540px;">
       <div class="modal-emergency-header">
         <div class="modal-emergency-title">
           <span>🚨</span>
@@ -124,27 +116,168 @@
         <button id="closeCrisisModal" class="btn btn-ghost" style="color: white; font-size: 1.2rem; padding: 4px 8px;">✕</button>
       </div>
       <div class="modal-emergency-body">
-        <p style="font-size: 0.85rem; color: var(--text-secondary);">
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">
           You are never alone. Professional support is available 24/7 free of charge:
         </p>
-        <div class="unmasked-data-grid" style="grid-template-columns: 1fr;">
+        <div class="unmasked-data-grid" style="grid-template-columns: 1fr; gap: 10px;">
           <div class="data-field-box highlight">
-            <span class="field-label">National Tele-MANAS Mental Health Helpline</span>
-            <span class="field-value"><a href="tel:14416" style="color: inherit;">📞 14416 (Toll-Free, 24x7)</a></span>
+            <span class="field-label">National Tele-MANAS Mental Health Helpline (24x7, Toll-Free)</span>
+            <span class="field-value">
+              <a href="tel:14416" style="color: #6ee7b7; text-decoration: none; font-weight: 700;">📞 14416</a>
+              <span style="font-size: 0.85rem; color: var(--text-muted); margin: 0 4px;">or</span>
+              <a href="tel:18008914416" style="color: #6ee7b7; text-decoration: none; font-weight: 700;">1800-891-4416</a>
+            </span>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
+              India's national mental health helpline by Ministry of Health and Family Welfare. Emotional support in major Indian languages.
+            </div>
           </div>
-          <div class="data-field-box">
+
+          <div class="data-field-box highlight">
             <span class="field-label">Campus Health & Wellness Center</span>
-            <span class="field-value"><a href="tel:0123456789" style="color: inherit;">🏥 Extension 4444</a></span>
+            <span class="field-value">
+              <a href="tel:7560350913" style="color: inherit; text-decoration: none; font-weight: 700;">🏥 7560350913</a>
+              <span style="font-size: 0.82rem; color: var(--text-muted); margin-left: 6px;">(Extension 4444)</span>
+            </span>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
+              Campus clinic for medical evaluation, urgent physician care, and health counseling.
+            </div>
           </div>
+
           <div class="data-field-box">
             <span class="field-label">Campus Security & Emergency Response</span>
-            <span class="field-value"><a href="tel:100" style="color: inherit;">🚨 Extension 100</a></span>
+            <span class="field-value">
+              <a href="tel:100" style="color: inherit; text-decoration: none; font-weight: 700;">🚨 Extension 100</a>
+            </span>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
+              Immediate on-campus security dispatch and rapid emergency intervention.
+            </div>
+          </div>
+
+          <div class="data-field-box">
+            <span class="field-label">KIRAN 24x7 National Mental Health Helpline (Toll-Free)</span>
+            <span class="field-value">
+              <a href="tel:18005990019" style="color: inherit; text-decoration: none; font-weight: 700;">🤝 1800-599-0019</a>
+            </span>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
+              Ministry of Social Justice & Empowerment: early screening, distress management, and psychological support in 13 languages.
+            </div>
+          </div>
+
+          <div class="data-field-box">
+            <span class="field-label">NIMHANS Psychosocial Helpline</span>
+            <span class="field-value">
+              <a href="tel:08046110007" style="color: inherit; text-decoration: none; font-weight: 700;">🧠 080-46110007</a>
+            </span>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
+              National Institute of Mental Health and Neurosciences: medical advice, counseling, and psychosocial support.
+            </div>
           </div>
         </div>
       </div>
       <div class="modal-actions">
         <button id="dismissCrisisModal" class="btn btn-secondary">Close</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Student Authentication & Profile Modal -->
+  <div id="studentAuthModal" class="modal-overlay">
+    <div class="auth-modal-card">
+      <div class="auth-header">
+        <div class="auth-header-icon">🎓</div>
+        <h2 class="auth-header-title">Student Campus Verification</h2>
+        <p class="auth-header-desc">Sign in with your campus credentials to start your confidential, encrypted session</p>
+      </div>
+
+      <!-- Quick 1-Click Demo Students (Spacious Grid of Cards) -->
+      <div class="demo-profiles-container">
+        <div class="demo-profiles-header">
+          <span class="demo-profiles-label">Quick 1-Click Demo Student Profiles</span>
+          <span class="demo-profiles-badge">Pre-configured Campus Test Accounts</span>
+        </div>
+        <div class="demo-students-grid">
+          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="divyanshu@campus.edu" data-pass="password123">
+            <span class="student-name">👨‍🎓 Divyanshu</span>
+            <span class="student-sub">21BCE1001 • BH-1</span>
+          </button>
+          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="varun@campus.edu" data-pass="password123">
+            <span class="student-name">👨‍🎓 Varun</span>
+            <span class="student-sub">21BCE1024 • BH-1</span>
+          </button>
+          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="vedant@campus.edu" data-pass="password123">
+            <span class="student-name">👨‍🎓 Vedant</span>
+            <span class="student-sub">21BCE1042 • BH-2</span>
+          </button>
+          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="siddhesh@campus.edu" data-pass="password123">
+            <span class="student-name">👨‍🎓 Siddhesh</span>
+            <span class="student-sub">21BCE1065 • BH-3</span>
+          </button>
+          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="vihan@campus.edu" data-pass="password123">
+            <span class="student-name">👨‍🎓 Vihan</span>
+            <span class="student-sub">21BCE1089 • BH-2</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div class="auth-tabs">
+        <button type="button" id="tabBtnLogin" class="auth-tab-btn active">Log In (Campus Email)</button>
+        <button type="button" id="tabBtnRegister" class="auth-tab-btn">Create New Account</button>
+      </div>
+
+      <!-- Tab 1: Login Form -->
+      <form id="studentLoginForm">
+        <div class="auth-form-grid">
+          <div class="auth-form-group auth-form-full">
+            <label>Campus Email</label>
+            <input type="email" id="studentLoginEmail" placeholder="e.g. vedant@campus.edu" required>
+          </div>
+          <div class="auth-form-group auth-form-full">
+            <label>Password</label>
+            <input type="password" id="studentLoginPass" placeholder="Enter your campus password" required>
+          </div>
+        </div>
+        <button type="submit" class="auth-submit-btn">
+          Sign In &amp; Launch Confidential Session →
+        </button>
+      </form>
+
+      <!-- Tab 2: Registration Form -->
+      <form id="studentRegisterForm" style="display: none;">
+        <div class="auth-form-grid">
+          <div class="auth-form-group">
+            <label>Full Name</label>
+            <input type="text" id="regName" placeholder="e.g. Rahul Sharma" required>
+          </div>
+          <div class="auth-form-group">
+            <label>Registration Number</label>
+            <input type="text" id="regNo" placeholder="e.g. 21BCE1099" required>
+          </div>
+          <div class="auth-form-group">
+            <label>Campus Email</label>
+            <input type="email" id="regEmail" placeholder="rahul@campus.edu" required>
+          </div>
+          <div class="auth-form-group">
+            <label>Emergency Contact Phone</label>
+            <input type="tel" id="regPhone" placeholder="+91-9876543210" required>
+          </div>
+          <div class="auth-form-group">
+            <label>Hostel Block</label>
+            <input type="text" id="regBlock" placeholder="BH-2" required>
+          </div>
+          <div class="auth-form-group">
+            <label>Room Number</label>
+            <input type="text" id="regRoom" placeholder="305" required>
+          </div>
+          <div class="auth-form-group auth-form-full">
+            <label>Create Password</label>
+            <input type="password" id="regPassword" placeholder="Create secure password" required>
+          </div>
+        </div>
+        <button type="submit" class="auth-submit-btn">
+          Register Account &amp; Start Confidential Chat →
+        </button>
+      </form>
     </div>
   </div>
 
@@ -172,10 +305,150 @@
       const returnToBotBtn = document.getElementById('returnToBotBtn');
       const newChatBtn = document.getElementById('newChatBtn');
 
-      // If no session ID is found, automatically create a fresh private session
-      if (!sessionId) {
+      // Student Profile & Authentication Elements
+      const studentNameDisplay = document.getElementById('studentNameDisplay');
+      const switchStudentBtn = document.getElementById('switchStudentBtn');
+      const studentAuthModal = document.getElementById('studentAuthModal');
+      const tabBtnLogin = document.getElementById('tabBtnLogin');
+      const tabBtnRegister = document.getElementById('tabBtnRegister');
+      const studentLoginForm = document.getElementById('studentLoginForm');
+      const studentRegisterForm = document.getElementById('studentRegisterForm');
+
+      let currentStudent = null;
+      try {
+        const stored = localStorage.getItem('mindmate_student');
+        if (stored) currentStudent = JSON.parse(stored);
+      } catch (e) {}
+
+      function updateStudentProfileUI() {
+        if (currentStudent) {
+          if (studentNameDisplay) {
+            studentNameDisplay.textContent = currentStudent.name;
+            studentNameDisplay.title = `${currentStudent.reg_no} • ${currentStudent.email}`;
+          }
+          if (studentAuthModal) studentAuthModal.classList.remove('active');
+        } else {
+          if (studentNameDisplay) studentNameDisplay.textContent = 'Sign In';
+          if (studentAuthModal) studentAuthModal.classList.add('active');
+        }
+      }
+
+      if (switchStudentBtn) {
+        switchStudentBtn.addEventListener('click', () => {
+          if (studentAuthModal) studentAuthModal.classList.add('active');
+        });
+      }
+
+      if (tabBtnLogin && tabBtnRegister) {
+        tabBtnLogin.addEventListener('click', () => {
+          tabBtnLogin.classList.add('active');
+          tabBtnRegister.classList.remove('active');
+          studentLoginForm.style.display = 'block';
+          studentRegisterForm.style.display = 'none';
+        });
+
+        tabBtnRegister.addEventListener('click', () => {
+          tabBtnRegister.classList.add('active');
+          tabBtnLogin.classList.remove('active');
+          studentLoginForm.style.display = 'none';
+          studentRegisterForm.style.display = 'block';
+        });
+      }
+
+      document.querySelectorAll('.demo-student-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.getElementById('studentLoginEmail').value = btn.dataset.email;
+          document.getElementById('studentLoginPass').value = btn.dataset.pass;
+          studentLoginForm.dispatchEvent(new Event('submit'));
+        });
+      });
+
+      if (studentLoginForm) {
+        studentLoginForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const email = document.getElementById('studentLoginEmail').value.trim();
+          const password = document.getElementById('studentLoginPass').value.trim();
+          try {
+            const res = await fetch('/api/v1/auth/student/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password })
+            });
+            if (res.ok) {
+              const data = await res.json();
+              currentStudent = data.student;
+              localStorage.setItem('mindmate_student', JSON.stringify(currentStudent));
+              showToast(`Logged in as ${currentStudent.name}`, 'success');
+              updateStudentProfileUI();
+              initFreshSession(currentStudent.id);
+            } else {
+              const err = await res.json();
+              showToast(err.detail || 'Login failed', 'danger');
+            }
+          } catch(e) {
+            showToast('Authentication connection error', 'danger');
+          }
+        });
+      }
+
+      if (studentRegisterForm) {
+        studentRegisterForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const payload = {
+            name: document.getElementById('regName').value.trim(),
+            reg_no: document.getElementById('regNo').value.trim(),
+            email: document.getElementById('regEmail').value.trim(),
+            phone: document.getElementById('regPhone').value.trim(),
+            block: document.getElementById('regBlock').value.trim(),
+            room: document.getElementById('regRoom').value.trim(),
+            password: document.getElementById('regPassword').value.trim()
+          };
+
+          try {
+            const res = await fetch('/api/v1/auth/student/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+              const data = await res.json();
+              currentStudent = data.student;
+              localStorage.setItem('mindmate_student', JSON.stringify(currentStudent));
+              showToast(`Account created for ${currentStudent.name}!`, 'success');
+              updateStudentProfileUI();
+              initFreshSession(currentStudent.id);
+            } else {
+              const err = await res.json();
+              showToast(err.detail || 'Registration failed', 'danger');
+            }
+          } catch(e) {
+            showToast('Registration connection error', 'danger');
+          }
+        });
+      }
+
+      async function initFreshSession(studentId) {
         try {
-          const res = await fetch('/api/v1/sessions/start', { method: 'POST' });
+          // Reset chat messages and persona UI completely for the new user/session
+          messagesList.innerHTML = '';
+          if (defaultWelcomeRow) defaultWelcomeRow.style.display = 'block';
+          const supportBanner = document.getElementById('chatSupportBanner');
+          if (supportBanner) supportBanner.style.display = 'none';
+          syncPersonaUI('LIVE_BOT');
+
+          if (socket) {
+            socket.onclose = null;
+            socket.close();
+            socket = null;
+          }
+
+          const body = studentId ? JSON.stringify({ student_id: studentId }) : null;
+          const headers = body ? { 'Content-Type': 'application/json' } : {};
+          const res = await fetch('/api/v1/sessions/start', {
+            method: 'POST',
+            headers: headers,
+            body: body
+          });
           if (res.ok) {
             const data = await res.json();
             sessionId = data.session_id;
@@ -183,15 +456,19 @@
             const newUrl = new URL(window.location.href);
             newUrl.searchParams.set('session_id', sessionId);
             window.history.replaceState({}, '', newUrl.toString());
-          } else {
-            showToast('Unable to initialize session. Redirecting...', 'warning');
-            setTimeout(() => window.location.href = 'index.html', 1200);
-            return;
+            sessionIdDisplay.textContent = `ID: #${sessionId}`;
+            connectWebSocket();
           }
-        } catch (e) {
-          window.location.href = 'index.html';
-          return;
+        } catch(e) {
+          console.error('Session start error:', e);
         }
+      }
+
+      updateStudentProfileUI();
+
+      // If no session ID is found, initialize session with active student
+      if (!sessionId) {
+        await initFreshSession(currentStudent ? currentStudent.id : null);
       }
 
       sessionStorage.setItem('mindmate_session_id', sessionId);
@@ -214,28 +491,29 @@
           personaAvatar.textContent = '🤖';
           personaAvatar.className = 'persona-avatar';
           personaNameText.textContent = 'Mind-Mate Companion';
-          tierBadge.className = 'badge badge-tier1';
-          tierBadge.textContent = 'Tier 1: AI Bot';
+          tierBadge.style.display = 'none';
           requestCounselorBtn.style.display = 'inline-flex';
           returnToBotBtn.style.display = 'none';
         } else if (status === 'AWAITING_COUNSELOR') {
           personaAvatar.textContent = '⏳';
           personaAvatar.className = 'persona-avatar';
-          personaNameText.textContent = 'Routing to Campus Counselor...';
+          personaNameText.textContent = 'Routing to Counselor...';
+          tierBadge.style.display = 'inline-flex';
           tierBadge.className = 'badge badge-tier2';
-          tierBadge.textContent = 'Tier 2: Escalating...';
+          tierBadge.textContent = 'Connecting...';
           requestCounselorBtn.style.display = 'none';
           returnToBotBtn.style.display = 'inline-flex';
         } else if (status === 'LIVE_COUNSELOR') {
           personaAvatar.textContent = '👩‍⚕️';
           personaAvatar.className = 'persona-avatar counselor-mode';
           personaNameText.textContent = 'Licensed Campus Counselor';
+          tierBadge.style.display = 'inline-flex';
           tierBadge.className = 'badge badge-tier2';
-          tierBadge.textContent = 'Tier 2: Human Counselor';
+          tierBadge.textContent = 'Human Counselor';
           requestCounselorBtn.style.display = 'none';
           returnToBotBtn.style.display = 'inline-flex';
         } else if (status === 'CRITICAL_SOS') {
-          freezeChat();
+          activateSupportMode();
         }
       }
 
@@ -272,12 +550,15 @@
       await loadSessionHistory();
 
       // 3. Connect WebSocket
-      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const wsUrl = `${wsProtocol}//${window.location.host}/ws/student/${encodeURIComponent(sessionId)}`;
-      console.log('Connecting to Student WebSocket:', wsUrl);
-
       function connectWebSocket() {
-        if (isChatFrozen) return;
+        if (!sessionId || isChatFrozen) return;
+        if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+          return;
+        }
+
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/student/${encodeURIComponent(sessionId)}`;
+        console.log('Connecting to Student WebSocket:', wsUrl);
 
         wsStatusDot.className = 'status-dot connecting';
         wsStatusText.textContent = 'Connecting...';
@@ -347,6 +628,27 @@
           return;
         }
 
+        // Direct Critical SOS Event
+        if (data.event === 'CRITICAL_SOS_TRIGGERED' || data.event === 'SOS_DISPATCH_TRIGGERED') {
+          if (currentStatus === 'CRITICAL_SOS') {
+            return; // Already in emergency mode, do not append duplicate notices
+          }
+          syncPersonaUI('CRITICAL_SOS');
+          playAudioAlert('sos');
+          if (data.content) appendSystemMessage(data.content);
+          return;
+        }
+
+        // Emergency SOS Resolved by Counselor
+        if (data.event === 'SOS_RESOLVED') {
+          const supportBanner = document.getElementById('chatSupportBanner');
+          if (supportBanner) supportBanner.style.display = 'none';
+          syncPersonaUI('LIVE_COUNSELOR');
+          playAudioAlert('chime');
+          appendSystemMessage(data.content || 'The emergency SOS protocol has been closed by your counselor. You remain in safe communication.');
+          return;
+        }
+
         const sender = (data.sender || 'BOT').toUpperCase();
         const content = data.content || '';
 
@@ -354,9 +656,15 @@
           appendBotMessage(content);
           playAudioAlert('chime');
         } else if (sender === 'SYSTEM') {
+          // Deduplicate consecutive identical system messages
+          const lastNotice = messagesList.querySelector('.message-row.system:last-child .system-notice');
+          if (lastNotice && lastNotice.textContent.trim() === content.trim()) {
+            return;
+          }
+
           appendSystemMessage(content);
 
-          if (content.toLowerCase().includes('routing you to a human counselor')) {
+          if (content.toLowerCase().includes('routing you to a human counselor') || content.toLowerCase().includes('licensed campus counselor')) {
             syncPersonaUI('AWAITING_COUNSELOR');
             playAudioAlert('alert');
           }
@@ -366,9 +674,11 @@
             playAudioAlert('chime');
           }
 
-          if (content.toLowerCase().includes('help is on the way')) {
-            syncPersonaUI('CRITICAL_SOS');
-            playAudioAlert('sos');
+          if (content.toLowerCase().includes('help is on the way') || content.toLowerCase().includes('emergency support has been alerted') || content.toLowerCase().includes('physical support')) {
+            if (currentStatus !== 'CRITICAL_SOS') {
+              syncPersonaUI('CRITICAL_SOS');
+              playAudioAlert('sos');
+            }
           }
 
           if (content.toLowerCase().includes('returned to mind-mate ai companion')) {
@@ -421,12 +731,13 @@
 
       function appendSystemMessage(text) {
         const row = document.createElement('div');
-        const isEmergency = text.toLowerCase().includes('help is on the way');
+        const isEmergency = text.toLowerCase().includes('help is on the way') || 
+                            text.toLowerCase().includes('emergency support') || 
+                            text.toLowerCase().includes('critical sos');
         row.className = `message-row system ${isEmergency ? 'sos' : ''}`;
         row.innerHTML = `
           <div class="system-notice">
-            <span>${isEmergency ? '🚨' : 'ℹ️'}</span>
-            <span>${escapeHTML(text)}</span>
+            ${escapeHTML(text)}
           </div>
         `;
         messagesList.appendChild(row);
@@ -451,20 +762,23 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
       }
 
-      function freezeChat() {
-        isChatFrozen = true;
-        chatFrozenBanner.classList.add('visible');
-        messageInput.disabled = true;
-        messageInput.placeholder = 'Chat locked. Emergency help is being dispatched.';
-        sendBtn.disabled = true;
+      function activateSupportMode() {
+        const supportBanner = document.getElementById('chatSupportBanner');
+        if (supportBanner) supportBanner.style.display = 'flex';
+        
+        // Chat is NEVER locked! Both student and counselor can continue talking freely.
+        messageInput.disabled = false;
+        sendBtn.disabled = false;
+        messageInput.placeholder = 'Message your counselor... (Enter to send)';
 
-        personaAvatar.textContent = '🚨';
-        personaAvatar.className = 'persona-avatar sos-mode';
-        personaNameText.textContent = 'Emergency Dispatch Active';
-        tierBadge.className = 'badge badge-tier3';
-        tierBadge.textContent = 'Tier 3: Critical SOS';
-        wsStatusDot.className = 'status-dot sos';
-        wsStatusText.textContent = 'SOS Active';
+        personaAvatar.textContent = '👩‍⚕️';
+        personaAvatar.className = 'persona-avatar counselor-mode';
+        personaNameText.textContent = 'Licensed Campus Counselor';
+        tierBadge.style.display = 'inline-flex';
+        tierBadge.className = 'badge badge-tier2';
+        tierBadge.textContent = 'Human Counselor';
+        wsStatusDot.className = 'status-dot online';
+        wsStatusText.textContent = 'Counselor Live';
         requestCounselorBtn.style.display = 'none';
         returnToBotBtn.style.display = 'none';
       }
@@ -472,7 +786,6 @@
       // Send Message Event
       chatForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        if (isChatFrozen) return;
 
         const text = messageInput.value.trim();
         if (!text) return;
@@ -530,7 +843,9 @@
         if (!confirmed) return;
 
         try {
-          const res = await fetch('/api/v1/sessions/start', { method: 'POST' });
+          const reqBody = currentStudent ? JSON.stringify({ student_id: currentStudent.id }) : null;
+          const headers = reqBody ? { 'Content-Type': 'application/json' } : {};
+          const res = await fetch('/api/v1/sessions/start', { method: 'POST', headers, body: reqBody });
           if (res.ok) {
             const data = await res.json();
             sessionStorage.setItem('mindmate_session_id', data.session_id);

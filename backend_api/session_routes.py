@@ -9,21 +9,40 @@ from backend_api.anonymizer import PIIAnonymizer
 router = APIRouter(prefix="/api/v1/sessions", tags=["Session Lifecycle & Privacy"])
 anonymizer = PIIAnonymizer()
 
+from pydantic import BaseModel
+from typing import Optional
+
+class StartSessionRequest(BaseModel):
+    student_id: Optional[int] = None
+
 @router.post("/start")
-def start_chat_session(db: Session = Depends(get_db)):
+def start_chat_session(payload: Optional[StartSessionRequest] = None, student_id: Optional[int] = None, db: Session = Depends(get_db)):
     """
     Creates a new, isolated confidential student chat session in Tier 1 (LIVE_BOT).
     Guarantees privacy: counselors cannot view or join until risk triage escalation.
     """
-    student = db.query(Student).first()
+    target_student_id = None
+    if payload and payload.student_id:
+        target_student_id = payload.student_id
+    elif student_id:
+        target_student_id = student_id
+
+    student = None
+    if target_student_id:
+        student = db.query(Student).filter(Student.id == target_student_id).first()
+
+    if not student:
+        student = db.query(Student).first()
+
     if not student:
         student = Student(
-            name="Alex",
+            name="Divyanshu",
             reg_no="21BCE1001",
-            block="BH-3",
-            room="405",
-            phone="+91-9876543210",
-            password_hash="demo_student_hash"
+            email="divyanshu@campus.edu",
+            block="BH-1",
+            room="101",
+            phone="+91-9876543211",
+            password_hash="password123"
         )
         db.add(student)
         db.commit()
@@ -42,7 +61,14 @@ def start_chat_session(db: Session = Depends(get_db)):
         "status": "success",
         "session_id": new_session.id,
         "session_status": new_session.status.value,
-        "created_at": new_session.created_at.isoformat()
+        "created_at": new_session.created_at.isoformat(),
+        "student": {
+            "id": student.id,
+            "name": student.name,
+            "reg_no": student.reg_no,
+            "email": student.email,
+            "location": f"Block {student.block}, Room {student.room}"
+        }
     }
 
 @router.get("/{session_id}")
