@@ -28,6 +28,12 @@ def ensure_schema_and_seed():
             counselor_cols = [row[1] for row in cursor.fetchall()]
             if "name" not in counselor_cols:
                 cursor.execute("ALTER TABLE counselors ADD COLUMN name VARCHAR;")
+
+            # Check chat_sessions.counselor_id
+            cursor.execute("PRAGMA table_info(chat_sessions);")
+            session_cols = [row[1] for row in cursor.fetchall()]
+            if "counselor_id" not in session_cols:
+                cursor.execute("ALTER TABLE chat_sessions ADD COLUMN counselor_id INTEGER;")
             
             conn.commit()
             conn.close()

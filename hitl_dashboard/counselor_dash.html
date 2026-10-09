@@ -388,42 +388,52 @@
         });
       }
 
+      async function executeCounselorLogin(empId, pass) {
+        if (!empId || !pass) {
+          showToast('Please provide both Employee ID and password.', 'warning');
+          return;
+        }
+        try {
+          const res = await fetch('/api/v1/auth/counselor/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ employee_id: empId.trim(), password: pass.trim() })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            localStorage.setItem('mindmate_counselor', JSON.stringify(data.counselor));
+            resetCounselorWorkspace();
+            showToast(`Logged in as ${data.counselor.name}`, 'success');
+            if (counselorAuthModal) counselorAuthModal.classList.remove('active');
+            if (checkCounselorAuth()) {
+              startQueuePolling();
+            }
+          } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.detail || 'Invalid Counselor credentials', 'danger');
+          }
+        } catch (e) {
+          showToast('Failed to connect to authentication server', 'danger');
+        }
+      }
+
       document.querySelectorAll('.demo-counselor-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          counselorLoginId.value = btn.dataset.id;
-          counselorLoginPass.value = btn.dataset.pass;
-          counselorLoginForm.dispatchEvent(new Event('submit'));
+        btn.addEventListener('click', (e) => {
+          const target = e.target.closest('.demo-counselor-btn') || e.currentTarget || btn;
+          const empId = target.dataset.id;
+          const pass = target.dataset.pass;
+          if (counselorLoginId) counselorLoginId.value = empId;
+          if (counselorLoginPass) counselorLoginPass.value = pass;
+          executeCounselorLogin(empId, pass);
         });
       });
 
       if (counselorLoginForm) {
         counselorLoginForm.addEventListener('submit', async (e) => {
           e.preventDefault();
-          const empId = counselorLoginId.value.trim();
-          const pass = counselorLoginPass.value.trim();
-          if (!empId || !pass) return;
-
-          try {
-            const res = await fetch('/api/v1/auth/counselor/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ employee_id: empId, password: pass })
-            });
-            if (res.ok) {
-              const data = await res.json();
-              localStorage.setItem('mindmate_counselor', JSON.stringify(data.counselor));
-              resetCounselorWorkspace();
-              showToast(`Logged in as ${data.counselor.name}`, 'success');
-              if (checkCounselorAuth()) {
-                startQueuePolling();
-              }
-            } else {
-              const err = await res.json();
-              showToast(err.detail || 'Invalid Counselor credentials', 'danger');
-            }
-          } catch(e) {
-            showToast('Failed to connect to authentication server', 'danger');
-          }
+          const empId = counselorLoginId.value;
+          const pass = counselorLoginPass.value;
+          await executeCounselorLogin(empId, pass);
         });
       }
 
@@ -435,7 +445,15 @@
       async function fetchTriageQueue() {
         if (!checkCounselorAuth()) return;
         try {
-          const res = await fetch('/api/v1/hitl/queue');
+          let queueUrl = '/api/v1/hitl/queue';
+          const stored = localStorage.getItem('mindmate_counselor');
+          if (stored) {
+            try {
+              const counselor = JSON.parse(stored);
+              if (counselor && counselor.id) queueUrl += `?counselor_id=${counselor.id}`;
+            } catch(e) {}
+          }
+          const res = await fetch(queueUrl);
           if (res.ok) {
             const data = await res.json();
             sessionsMap.clear();
@@ -670,7 +688,15 @@
         }
 
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws/counselor/${sessionId}`;
+        let cidParam = '';
+        const stored = localStorage.getItem('mindmate_counselor');
+        if (stored) {
+          try {
+            const counselor = JSON.parse(stored);
+            if (counselor && counselor.id) cidParam = `?counselor_id=${counselor.id}`;
+          } catch(e) {}
+        }
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/counselor/${sessionId}${cidParam}`;
         console.log(`Counselor connecting to session #${sessionId}:`, wsUrl);
 
         if (sessionId === currentSessionId) {
@@ -821,6 +847,12 @@
               if (btnStopSos) btnStopSos.style.display = 'none';
             }
           }
+          fetchTriageQueue();
+          return;
+        }
+
+        // Another counselor claimed a session
+        if (data.event === 'SESSION_CLAIMED') {
           fetchTriageQueue();
           return;
         }

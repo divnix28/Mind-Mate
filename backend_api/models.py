@@ -37,12 +37,14 @@ class ChatSession(Base):
     __tablename__ = "chat_sessions"
     id = Column(Integer, primary_key=True, index=True)
     student_id = Column(Integer, ForeignKey("students.id"), nullable=False)
+    counselor_id = Column(Integer, ForeignKey("counselors.id"), nullable=True)
     status = Column(Enum(SessionStatus), default=SessionStatus.LIVE_BOT)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     escalation_msg_id = Column(Integer, nullable=True)
     escalated_at = Column(DateTime, nullable=True)
 
     student = relationship("Student")
+    counselor = relationship("Counselor")
     messages = relationship("Message", back_populates="session")
 
 class Message(Base):

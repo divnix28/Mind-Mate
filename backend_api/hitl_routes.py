@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import Optional
 from .database import get_db
 from .models import ChatSession, Student, Message, SessionStatus, SenderType
 from .connection_manager import manager
@@ -9,10 +10,13 @@ router = APIRouter(prefix="/api/v1/hitl", tags=["Human-in-the-Loop"])
 anonymizer = PIIAnonymizer()
 
 @router.get("/queue")
-def get_escalation_queue(db: Session = Depends(get_db)):
+def get_escalation_queue(counselor_id: Optional[int] = None, db: Session = Depends(get_db)):
     """
-    Returns only sessions that require counselor intervention or are in active clinical triage.
+    Returns sessions that require counselor intervention or are in active clinical triage.
     STRICT PRIVACY RULE: Tier 1 private AI sessions (LIVE_BOT) are NEVER returned in this queue.
+    COUNSELOR ISOLATION:
+    - Awaiting sessions and SOS sessions are visible to all counselors (needing urgent intervention).
+    - Active LIVE_COUNSELOR sessions are ONLY shown to the counselor who claimed them.
     """
     escalated_statuses = [
         SessionStatus.AWAITING_COUNSELOR,
@@ -20,9 +24,17 @@ def get_escalation_queue(db: Session = Depends(get_db)):
         SessionStatus.CRITICAL_SOS
     ]
 
-    sessions = db.query(ChatSession).filter(
+    query = db.query(ChatSession).filter(
         ChatSession.status.in_(escalated_statuses)
-    ).order_by(ChatSession.created_at.desc()).all()
+    )
+
+    if counselor_id:
+        query = query.filter(
+            (ChatSession.status.in_([SessionStatus.AWAITING_COUNSELOR, SessionStatus.CRITICAL_SOS])) |
+            ((ChatSession.status == SessionStatus.LIVE_COUNSELOR) & ((ChatSession.counselor_id == counselor_id) | (ChatSession.counselor_id.is_(None))))
+        )
+
+    sessions = query.order_by(ChatSession.created_at.desc()).all()
 
     queue_items = []
     for s in sessions:
@@ -51,7 +63,9 @@ def get_escalation_queue(db: Session = Depends(get_db)):
             "status": s.status.value,
             "preview": preview,
             "message_count": msg_count,
-            "created_at": s.created_at.isoformat() if s.created_at else None
+            "created_at": s.created_at.isoformat() if s.created_at else None,
+            "counselor_id": s.counselor_id,
+            "counselor_name": s.counselor.name if s.counselor else None
         })
 
     return queue_items
@@ -60,10 +74,9 @@ def get_escalation_queue(db: Session = Depends(get_db)):
 def get_counselor_session_transcript(session_id: int, db: Session = Depends(get_db)):
     """
     CRITICAL PRIVACY ENFORCEMENT:
-    A counselor must NEVER see the student's private AI companion banter (Tier 1).
-    This endpoint returns all student and counselor messages for escalated sessions.
+    A counselor must NEVER see the messages the student sent when talking to the chatbot (Tier 1 AI banter).
+    Only messages sent from the escalation point onward are returned.
     All student messages returned here are strictly scrubbed using Presidio PIIAnonymizer.
-    Private AI bot banter is completely excluded.
     """
     session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not session:
@@ -75,11 +88,22 @@ def get_counselor_session_transcript(session_id: int, db: Session = Depends(get_
             detail="Access Denied: Session is in confidential Tier 1 AI companion mode."
         )
 
-    # Return all student & counselor messages for this session
-    messages = db.query(Message).filter(
+    # Exclude all messages the student sent when talking to the chatbot.
+    # Only return messages sent from the escalation point onward!
+    query = db.query(Message).filter(
         Message.session_id == session_id,
         Message.sender_type.in_([SenderType.STUDENT, SenderType.COUNSELOR])
-    ).order_by(Message.timestamp.asc()).all()
+    )
+
+    if session.escalation_msg_id:
+        query = query.filter(Message.id > session.escalation_msg_id)
+    elif session.escalated_at:
+        query = query.filter(Message.timestamp >= session.escalated_at)
+    else:
+        # Fallback: only counselor messages
+        query = query.filter(Message.sender_type == SenderType.COUNSELOR)
+
+    messages = query.order_by(Message.timestamp.asc()).all()
 
     formatted = []
     for msg in messages:
@@ -95,6 +119,7 @@ def get_counselor_session_transcript(session_id: int, db: Session = Depends(get_
     return {
         "session_id": session.id,
         "status": session.status.value,
+        "counselor_id": session.counselor_id,
         "messages": formatted
     }
 
@@ -142,6 +167,9 @@ async def resolve_counselor_session(session_id: int, db: Session = Depends(get_d
         raise HTTPException(status_code=404, detail="Chat session not found.")
 
     session.status = SessionStatus.LIVE_BOT
+    session.counselor_id = None
+    session.escalation_msg_id = None
+    session.escalated_at = None
     db.commit()
 
     # Inform student via WebSocket

@@ -1372,6 +1372,9 @@ a:hover {
   gap: 4px;
   color: var(--text-primary);
 }
+.demo-student-card-btn * {
+  pointer-events: none;
+}
 .demo-student-card-btn:hover {
   background: rgba(99, 102, 241, 0.2);
   border-color: var(--indigo-400);

@@ -2,6 +2,7 @@ import os
 import re
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -217,7 +218,7 @@ async def student_chat_endpoint(websocket: WebSocket, session_id: int, db: Sessi
 
 # --- Tier 2: Counselor Portal ---
 @app.websocket("/ws/counselor/{session_id}")
-async def counselor_chat_endpoint(websocket: WebSocket, session_id: int, db: Session = Depends(get_db)):
+async def counselor_chat_endpoint(websocket: WebSocket, session_id: int, counselor_id: Optional[int] = None, db: Session = Depends(get_db)):
     chat_session = db.query(ChatSession).filter(ChatSession.id == session_id).first()
     if not chat_session:
         await websocket.accept()
@@ -243,15 +244,28 @@ async def counselor_chat_endpoint(websocket: WebSocket, session_id: int, db: Ses
 
     await manager.connect(websocket, session_id, "counselor")
     
-    # If session was awaiting counselor, counselor claiming it sets it to LIVE_COUNSELOR
+    # If session was awaiting counselor, counselor claiming it sets it to LIVE_COUNSELOR and assigns counselor_id
     if chat_session.status == SessionStatus.AWAITING_COUNSELOR:
         chat_session.status = SessionStatus.LIVE_COUNSELOR
+        if counselor_id:
+            chat_session.counselor_id = counselor_id
         db.commit()
+        await manager.broadcast_to_counselors({
+            "event": "SESSION_CLAIMED",
+            "session_id": session_id,
+            "counselor_id": counselor_id
+        })
         await manager.send_to_role(session_id, "student", {
             "sender": "SYSTEM",
             "content": "A licensed campus counselor has joined the session."
         })
+    elif chat_session.status == SessionStatus.LIVE_COUNSELOR and counselor_id:
+        chat_session.counselor_id = counselor_id
+        db.commit()
     elif chat_session.status == SessionStatus.CRITICAL_SOS:
+        if counselor_id and not chat_session.counselor_id:
+            chat_session.counselor_id = counselor_id
+            db.commit()
         await websocket.send_json({
             "event": "SESSION_STATE",
             "status": "CRITICAL_SOS",

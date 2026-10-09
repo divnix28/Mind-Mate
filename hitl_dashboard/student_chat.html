@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Mind-Mate Confidential Student Chat Interface">
   <title>Student Chat | Mind-Mate Support</title>
   <link rel="stylesheet" href="css/style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+  <link rel="icon"
+    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
 </head>
+
 <body class="chat-layout">
 
   <!-- Chat Top Header -->
@@ -29,25 +32,33 @@
             <span id="wsStatusDot" class="status-dot connecting"></span>
             <span id="wsStatusText">Connecting...</span>
             <span>•</span>
-            <span class="mono" id="sessionIdDisplay" style="cursor: pointer;" title="Click to copy Session ID">ID: --</span>
+            <span class="mono" id="sessionIdDisplay" style="cursor: pointer;" title="Click to copy Session ID">ID:
+              --</span>
           </div>
         </div>
       </div>
     </div>
 
     <div class="header-actions" style="display: flex; align-items: center; gap: 8px;">
-      <div id="studentProfileBadge" style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; background: var(--bg-card); padding: 5px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+      <div id="studentProfileBadge"
+        style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; background: var(--bg-card); padding: 5px 12px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
         <span>👤</span>
         <span id="studentNameDisplay" style="font-weight: 700; color: var(--text-primary);">Student</span>
-        <button id="switchStudentBtn" class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.72rem; color: var(--text-muted);" title="Switch Account">Switch</button>
+        <button id="switchStudentBtn" class="btn btn-ghost"
+          style="padding: 2px 6px; font-size: 0.72rem; color: var(--text-muted);" title="Switch Account">Switch</button>
       </div>
-      <button id="newChatBtn" class="btn btn-secondary" style="font-size: 0.78rem; padding: 6px 12px;" title="Start a fresh confidential AI conversation">
+      <button id="newChatBtn" class="btn btn-secondary" style="font-size: 0.78rem; padding: 6px 12px;"
+        title="Start a fresh confidential AI conversation">
         ✨ New Chat
       </button>
-      <button id="requestCounselorBtn" class="btn btn-secondary" style="font-size: 0.78rem; padding: 6px 12px; border-color: var(--teal-500); color: var(--teal-400);" title="Request a licensed campus counselor">
+      <button id="requestCounselorBtn" class="btn btn-secondary"
+        style="font-size: 0.78rem; padding: 6px 12px; border-color: var(--teal-500); color: var(--teal-400);"
+        title="Request a licensed campus counselor">
         👩‍⚕️ Talk to Counselor
       </button>
-      <button id="returnToBotBtn" class="btn btn-secondary" style="font-size: 0.78rem; padding: 6px 12px; display: none; border-color: var(--indigo-500); color: var(--indigo-300);" title="Return to AI Companion">
+      <button id="returnToBotBtn" class="btn btn-secondary"
+        style="font-size: 0.78rem; padding: 6px 12px; display: none; border-color: var(--indigo-500); color: var(--indigo-300);"
+        title="Return to AI Companion">
         🤖 Back to AI Bot
       </button>
       <button id="crisisHelpBtn" class="btn btn-danger" style="font-size: 0.78rem; padding: 6px 12px;">
@@ -67,7 +78,7 @@
             <span>Mind-Mate AI Companion</span>
           </div>
           <div class="message-text">
-            Hello! I'm your Mind-Mate support companion. I'm here to listen without judgment. 
+            Hello! I'm your Mind-Mate support companion. I'm here to listen without judgment.
             How are you feeling today? You can share anything on your mind.
           </div>
           <span class="message-time" id="initialBotTime">Just now</span>
@@ -79,29 +90,26 @@
   <!-- Chat Input Wrapper -->
   <footer class="chat-input-wrapper">
     <!-- Gentle Emergency Support Notice (Calm and never locks the chat) -->
-    <div class="chat-support-banner" id="chatSupportBanner" style="display: none; align-items: center; gap: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 8px 14px; margin-bottom: 8px;">
+    <div class="chat-support-banner" id="chatSupportBanner"
+      style="display: none; align-items: center; gap: 10px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 8px 14px; margin-bottom: 8px;">
       <span style="font-size: 1.2rem;">🤝</span>
       <div style="font-size: 0.8rem; color: #a7f3d0;">
-        <strong>Campus Support Active:</strong> In-person emergency assistance has been alerted. Your counselor remains live in this chat—please keep talking with them.
+        <strong>Campus Support Active:</strong> In-person emergency assistance has been alerted. Your counselor remains
+        live in this chat—please keep talking with them.
       </div>
     </div>
 
     <!-- Active Input Bar -->
     <form id="chatForm" class="chat-input-bar">
-      <input 
-        type="text" 
-        id="messageInput" 
-        class="chat-input-field" 
-        placeholder="Type what is on your mind... (Enter to send)" 
-        autocomplete="off"
-        disabled
-      >
+      <input type="text" id="messageInput" class="chat-input-field"
+        placeholder="Type what is on your mind... (Enter to send)" autocomplete="off" disabled>
       <button type="submit" id="sendBtn" class="btn-send" title="Send Message" disabled>
         ➤
       </button>
     </form>
     <div style="text-align: center; margin-top: 8px; font-size: 0.72rem; color: var(--text-muted);">
-      Mind-Mate is an AI support assistant and not a replacement for medical diagnosis. In case of crisis, reach out to campus staff.
+      Mind-Mate is an AI support assistant and not a replacement for medical diagnosis. In case of crisis, reach out to
+      campus staff.
     </div>
   </footer>
 
@@ -113,7 +121,8 @@
           <span>🚨</span>
           <h2>Campus & National Crisis Helplines</h2>
         </div>
-        <button id="closeCrisisModal" class="btn btn-ghost" style="color: white; font-size: 1.2rem; padding: 4px 8px;">✕</button>
+        <button id="closeCrisisModal" class="btn btn-ghost"
+          style="color: white; font-size: 1.2rem; padding: 4px 8px;">✕</button>
       </div>
       <div class="modal-emergency-body">
         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">
@@ -125,17 +134,20 @@
             <span class="field-value">
               <a href="tel:14416" style="color: #6ee7b7; text-decoration: none; font-weight: 700;">📞 14416</a>
               <span style="font-size: 0.85rem; color: var(--text-muted); margin: 0 4px;">or</span>
-              <a href="tel:18008914416" style="color: #6ee7b7; text-decoration: none; font-weight: 700;">1800-891-4416</a>
+              <a href="tel:18008914416"
+                style="color: #6ee7b7; text-decoration: none; font-weight: 700;">1800-891-4416</a>
             </span>
             <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
-              India's national mental health helpline by Ministry of Health and Family Welfare. Emotional support in major Indian languages.
+              India's national mental health helpline by Ministry of Health and Family Welfare. Emotional support in
+              major Indian languages.
             </div>
           </div>
 
           <div class="data-field-box highlight">
             <span class="field-label">Campus Health & Wellness Center</span>
             <span class="field-value">
-              <a href="tel:7560350913" style="color: inherit; text-decoration: none; font-weight: 700;">🏥 7560350913</a>
+              <a href="tel:7560350913" style="color: inherit; text-decoration: none; font-weight: 700;">🏥
+                7560350913</a>
               <span style="font-size: 0.82rem; color: var(--text-muted); margin-left: 6px;">(Extension 4444)</span>
             </span>
             <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
@@ -156,20 +168,24 @@
           <div class="data-field-box">
             <span class="field-label">KIRAN 24x7 National Mental Health Helpline (Toll-Free)</span>
             <span class="field-value">
-              <a href="tel:18005990019" style="color: inherit; text-decoration: none; font-weight: 700;">🤝 1800-599-0019</a>
+              <a href="tel:18005990019" style="color: inherit; text-decoration: none; font-weight: 700;">🤝
+                1800-599-0019</a>
             </span>
             <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
-              Ministry of Social Justice & Empowerment: early screening, distress management, and psychological support in 13 languages.
+              Ministry of Social Justice & Empowerment: early screening, distress management, and psychological support
+              in 13 languages.
             </div>
           </div>
 
           <div class="data-field-box">
             <span class="field-label">NIMHANS Psychosocial Helpline</span>
             <span class="field-value">
-              <a href="tel:08046110007" style="color: inherit; text-decoration: none; font-weight: 700;">🧠 080-46110007</a>
+              <a href="tel:08046110007" style="color: inherit; text-decoration: none; font-weight: 700;">🧠
+                080-46110007</a>
             </span>
             <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
-              National Institute of Mental Health and Neurosciences: medical advice, counseling, and psychosocial support.
+              National Institute of Mental Health and Neurosciences: medical advice, counseling, and psychosocial
+              support.
             </div>
           </div>
         </div>
@@ -186,7 +202,8 @@
       <div class="auth-header">
         <div class="auth-header-icon">🎓</div>
         <h2 class="auth-header-title">Student Campus Verification</h2>
-        <p class="auth-header-desc">Sign in with your campus credentials to start your confidential, encrypted session</p>
+        <p class="auth-header-desc">Sign in with your campus credentials to start your confidential, encrypted session
+        </p>
       </div>
 
       <!-- Quick 1-Click Demo Students (Spacious Grid of Cards) -->
@@ -196,23 +213,28 @@
           <span class="demo-profiles-badge">Pre-configured Campus Test Accounts</span>
         </div>
         <div class="demo-students-grid">
-          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="divyanshu@campus.edu" data-pass="password123">
+          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="divyanshu@campus.edu"
+            data-pass="password123">
             <span class="student-name">👨‍🎓 Divyanshu</span>
             <span class="student-sub">21BCE1001 • BH-1</span>
           </button>
-          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="varun@campus.edu" data-pass="password123">
+          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="varun@campus.edu"
+            data-pass="password123">
             <span class="student-name">👨‍🎓 Varun</span>
             <span class="student-sub">21BCE1024 • BH-1</span>
           </button>
-          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="vedant@campus.edu" data-pass="password123">
+          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="vedant@campus.edu"
+            data-pass="password123">
             <span class="student-name">👨‍🎓 Vedant</span>
             <span class="student-sub">21BCE1042 • BH-2</span>
           </button>
-          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="siddhesh@campus.edu" data-pass="password123">
+          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="siddhesh@campus.edu"
+            data-pass="password123">
             <span class="student-name">👨‍🎓 Siddhesh</span>
             <span class="student-sub">21BCE1065 • BH-3</span>
           </button>
-          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="vihan@campus.edu" data-pass="password123">
+          <button type="button" class="demo-student-card-btn demo-student-btn" data-email="vihan@campus.edu"
+            data-pass="password123">
             <span class="student-name">👨‍🎓 Vihan</span>
             <span class="student-sub">21BCE1089 • BH-2</span>
           </button>
@@ -318,7 +340,7 @@
       try {
         const stored = localStorage.getItem('mindmate_student');
         if (stored) currentStudent = JSON.parse(stored);
-      } catch (e) {}
+      } catch (e) { }
 
       function updateStudentProfileUI() {
         if (currentStudent) {
@@ -355,39 +377,62 @@
         });
       }
 
+      async function executeStudentLogin(email, password) {
+        if (!email || !password) {
+          showToast('Please provide both email and password.', 'warning');
+          return;
+        }
+        try {
+          const res = await fetch('/api/v1/auth/student/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: email.trim(), password: password.trim() })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            currentStudent = data.student;
+            localStorage.setItem('mindmate_student', JSON.stringify(currentStudent));
+            showToast(`Logged in as ${currentStudent.name}`, 'success');
+            if (studentAuthModal) studentAuthModal.classList.remove('active');
+            updateStudentProfileUI();
+            await initFreshSession(currentStudent.id);
+          } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.detail || 'Login failed. Please check credentials.', 'danger');
+          }
+        } catch (e) {
+          showToast('Authentication connection error', 'danger');
+        }
+      }
+
       document.querySelectorAll('.demo-student-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          document.getElementById('studentLoginEmail').value = btn.dataset.email;
-          document.getElementById('studentLoginPass').value = btn.dataset.pass;
-          studentLoginForm.dispatchEvent(new Event('submit'));
+        btn.addEventListener('click', (e) => {
+          const target = e.target.closest('.demo-student-btn') || e.currentTarget || btn;
+          const email = target.dataset.email;
+          const pass = target.dataset.pass;
+          const emailInput = document.getElementById('studentLoginEmail');
+          const passInput = document.getElementById('studentLoginPass');
+          if (emailInput) emailInput.value = email;
+          if (passInput) passInput.value = pass;
+
+          // If the user had opened the registration tab, reset to login tab
+          if (tabBtnLogin && tabBtnRegister && studentLoginForm && studentRegisterForm) {
+            tabBtnLogin.classList.add('active');
+            tabBtnRegister.classList.remove('active');
+            studentLoginForm.style.display = 'block';
+            studentRegisterForm.style.display = 'none';
+          }
+
+          executeStudentLogin(email, pass);
         });
       });
 
       if (studentLoginForm) {
         studentLoginForm.addEventListener('submit', async (e) => {
           e.preventDefault();
-          const email = document.getElementById('studentLoginEmail').value.trim();
-          const password = document.getElementById('studentLoginPass').value.trim();
-          try {
-            const res = await fetch('/api/v1/auth/student/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, password })
-            });
-            if (res.ok) {
-              const data = await res.json();
-              currentStudent = data.student;
-              localStorage.setItem('mindmate_student', JSON.stringify(currentStudent));
-              showToast(`Logged in as ${currentStudent.name}`, 'success');
-              updateStudentProfileUI();
-              initFreshSession(currentStudent.id);
-            } else {
-              const err = await res.json();
-              showToast(err.detail || 'Login failed', 'danger');
-            }
-          } catch(e) {
-            showToast('Authentication connection error', 'danger');
-          }
+          const email = document.getElementById('studentLoginEmail').value;
+          const password = document.getElementById('studentLoginPass').value;
+          await executeStudentLogin(email, password);
         });
       }
 
@@ -421,7 +466,7 @@
               const err = await res.json();
               showToast(err.detail || 'Registration failed', 'danger');
             }
-          } catch(e) {
+          } catch (e) {
             showToast('Registration connection error', 'danger');
           }
         });
@@ -459,7 +504,7 @@
             sessionIdDisplay.textContent = `ID: #${sessionId}`;
             connectWebSocket();
           }
-        } catch(e) {
+        } catch (e) {
           console.error('Session start error:', e);
         }
       }
@@ -731,9 +776,9 @@
 
       function appendSystemMessage(text) {
         const row = document.createElement('div');
-        const isEmergency = text.toLowerCase().includes('help is on the way') || 
-                            text.toLowerCase().includes('emergency support') || 
-                            text.toLowerCase().includes('critical sos');
+        const isEmergency = text.toLowerCase().includes('help is on the way') ||
+          text.toLowerCase().includes('emergency support') ||
+          text.toLowerCase().includes('critical sos');
         row.className = `message-row system ${isEmergency ? 'sos' : ''}`;
         row.innerHTML = `
           <div class="system-notice">
@@ -765,7 +810,7 @@
       function activateSupportMode() {
         const supportBanner = document.getElementById('chatSupportBanner');
         if (supportBanner) supportBanner.style.display = 'flex';
-        
+
         // Chat is NEVER locked! Both student and counselor can continue talking freely.
         messageInput.disabled = false;
         sendBtn.disabled = false;
@@ -871,4 +916,5 @@
     });
   </script>
 </body>
+
 </html>

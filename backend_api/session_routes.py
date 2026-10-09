@@ -124,13 +124,9 @@ async def request_counselor_escalation(session_id: int, db: Session = Depends(ge
 
     if session.status == SessionStatus.LIVE_BOT:
         session.status = SessionStatus.AWAITING_COUNSELOR
-        # Track escalation point
-        last_msg = db.query(Message).filter(
-            Message.session_id == session_id,
-            Message.sender_type == SenderType.STUDENT
-        ).order_by(Message.timestamp.desc()).first()
-        if last_msg:
-            session.escalation_msg_id = last_msg.id
+        # Voluntary handoff has no prior trigger message (student clicked button).
+        # Set escalation_msg_id to None so chatbot conversation is completely excluded.
+        session.escalation_msg_id = None
         session.escalated_at = datetime.now(timezone.utc)
         db.commit()
 
@@ -158,6 +154,9 @@ async def return_to_bot_companion(session_id: int, db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail=f"Session #{session_id} not found.")
 
     session.status = SessionStatus.LIVE_BOT
+    session.counselor_id = None
+    session.escalation_msg_id = None
+    session.escalated_at = None
     db.commit()
 
     # NOTIFY THE COUNSELOR IMMEDIATELY VIA WEBSOCKET
